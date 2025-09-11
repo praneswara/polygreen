@@ -72,20 +72,17 @@ def login():
 
 # ---------------- User endpoints ---------
 @app.route("/api/users/me", methods=["GET"])
-@jwt_required()
 def me():
     return jsonify({k: v for k, v in USER.items() if k != "password"})
 
 
 # ---------------- Transactions -----------
 @app.route("/api/transactions", methods=["GET"])
-@jwt_required()
 def transactions():
     return jsonify(items=TRANSACTIONS)
 
 
 @app.route("/api/points/summary", methods=["GET"])
-@jwt_required()
 def points_summary():
     return jsonify(
         total_points=USER["points"],
@@ -95,13 +92,11 @@ def points_summary():
 
 # ---------------- Redeem -----------------
 @app.route("/api/redeem/brands", methods=["GET"])
-@jwt_required()
 def redeem_brands():
     return jsonify(items=BRANDS)
 
 
 @app.route("/api/redeem/request", methods=["POST"])
-@jwt_required()
 def redeem_request():
     data = request.get_json() or {}
     brand_id = data.get("brand_id")
@@ -133,3 +128,4 @@ def list_machines():
 # ---------------- Run --------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
