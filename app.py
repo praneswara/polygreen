@@ -18,13 +18,10 @@ DEMO_USER = {
 # ---------------- Auth ---------------------
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-    data = request.get_json() or {}
-    if data.get("mobile") == 1234567890 and data.get("password") == "password123":
-        return jsonify(
-            access_token="dummy-token",
-            user=DEMO_USER
-        )
-    return jsonify(message="Invalid credentials"), 401
+    return jsonify(
+        access_token="dummy-token",
+        user=DEMO_USER
+    )
 
 
 @app.route("/api/auth/register", methods=["POST"])
@@ -130,3 +127,4 @@ def home():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
