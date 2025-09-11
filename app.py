@@ -58,6 +58,10 @@ def get_user_or_404(uid):
         abort(404, description="User not found")
     return user
 
+@app.route("/")
+def index():
+    return "Hello polygreen"
+    
 # ---------------- Auth -------------------
 @app.route("/api/auth/register", methods=["POST"])
 def register():
@@ -299,4 +303,5 @@ def list_machines():
 if __name__ == "__main__":
     with app.app_context():
         init_db() 
+
     app.run(host="0.0.0.0", port=5000, debug=True)
