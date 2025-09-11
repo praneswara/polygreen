@@ -1,131 +1,132 @@
-import os
-import datetime as dt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_jwt_extended import (
-    JWTManager, create_access_token, jwt_required, get_jwt_identity
-)
-from dotenv import load_dotenv
+import datetime as dt
 
-# ---------------- App setup -------------
-load_dotenv()
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "devjwt")
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = dt.timedelta(hours=24)
-app.config["JWT_ALGORITHM"] = "HS256"
-
 CORS(app)
-jwt = JWTManager(app)
 
-# ---------------- Demo Data -------------
-USER = {
-    "id": 1,
-    "name": "Demo User",
-    "mobile": "1234567890",
-    "password": "password123",  # plain-text for demo
+# ---------------- Demo user ----------------
+DEMO_USER = {
+    "id": 0,
+    "name": "BUSANTECH",
+    "mobile": 1234567890,
     "points": 100,
     "bottles": 10,
     "created_at": dt.datetime.utcnow().isoformat()
 }
 
-TRANSACTIONS = [
-    {"id": 1, "type": "earn", "points": 50, "brand_id": None, "machine_id": "M001", "created_at": dt.datetime.utcnow().isoformat()},
-    {"id": 2, "type": "redeem", "points": 30, "brand_id": 1, "machine_id": None, "created_at": dt.datetime.utcnow().isoformat()},
-]
-
-MACHINES = [
-    {
-        "id": 1, "machine_id": "M001", "name": "RVM Station A", "city": "Test City",
-        "lat": 10.82, "lng": 78.70, "current_bottles": 20, "max_capacity": 100,
-        "available_space": 80, "is_full": False, "last_emptied": None
-    },
-    {
-        "id": 2, "machine_id": "M002", "name": "RVM Station B", "city": "Test City",
-        "lat": 12.93, "lng": 77.62, "current_bottles": 50, "max_capacity": 100,
-        "available_space": 50, "is_full": False, "last_emptied": None
-    }
-]
-
-BRANDS = [
-    {"id": 1, "name": "Amazon", "min_points": 200},
-    {"id": 2, "name": "Flipkart", "min_points": 150},
-    {"id": 3, "name": "Swiggy", "min_points": 100},
-]
-
-
-# ---------------- Auth -------------------
+# ---------------- Auth ---------------------
 @app.route("/api/auth/login", methods=["POST"])
 def login():
     data = request.get_json() or {}
-    mobile = str(data.get("mobile", ""))
-    password = data.get("password", "")
-
-    if mobile == USER["mobile"] and password == USER["password"]:
-        token = create_access_token(identity=str(USER["id"]), additional_claims={"mobile": USER["mobile"], "name": USER["name"]})
+    if data.get("mobile") == 1234567890 and data.get("password") == "password123":
         return jsonify(
-            access_token=token,
-            user={k: v for k, v in USER.items() if k != "password"}
+            access_token="dummy-token",
+            user=DEMO_USER
         )
     return jsonify(message="Invalid credentials"), 401
 
 
-# ---------------- User endpoints ---------
+@app.route("/api/auth/register", methods=["POST"])
+def register():
+    return jsonify(message="Registered"), 201
+
+
+# ---------------- User ---------------------
 @app.route("/api/users/me", methods=["GET"])
 def me():
-    return jsonify({k: v for k, v in USER.items() if k != "password"})
+    return jsonify(DEMO_USER)
 
 
-# ---------------- Transactions -----------
-@app.route("/api/transactions", methods=["GET"])
-def transactions():
-    return jsonify(items=TRANSACTIONS)
-
-
+# ---------------- Points -------------------
 @app.route("/api/points/summary", methods=["GET"])
 def points_summary():
     return jsonify(
-        total_points=USER["points"],
-        recent=TRANSACTIONS[-10:]
+        total_points=DEMO_USER["points"],
+        recent=[
+            {"id": 1, "points": 20, "created_at": dt.datetime.utcnow().isoformat(), "type": "earn"},
+            {"id": 2, "points": -50, "created_at": dt.datetime.utcnow().isoformat(), "type": "redeem"}
+        ]
     )
 
 
-# ---------------- Redeem -----------------
+@app.route("/api/transactions", methods=["GET"])
+def transactions():
+    return jsonify(items=[
+        {"id": 1, "type": "earn", "points": 20, "brand_id": None,
+         "machine_id": "M001", "created_at": dt.datetime.utcnow().isoformat()},
+        {"id": 2, "type": "redeem", "points": 50, "brand_id": 1,
+         "machine_id": None, "created_at": dt.datetime.utcnow().isoformat()}
+    ])
+
+
+# ---------------- Redeem -------------------
 @app.route("/api/redeem/brands", methods=["GET"])
 def redeem_brands():
-    return jsonify(items=BRANDS)
+    return jsonify(items=[
+        {"id": 1, "name": "Amazon", "min_points": 200},
+        {"id": 2, "name": "Flipkart", "min_points": 150},
+        {"id": 3, "name": "Swiggy", "min_points": 100}
+    ])
 
 
 @app.route("/api/redeem/request", methods=["POST"])
 def redeem_request():
-    data = request.get_json() or {}
-    brand_id = data.get("brand_id")
-    pts = int(data.get("points", 0))
-    brand = next((b for b in BRANDS if b["id"] == brand_id), None)
-
-    if not brand:
-        return jsonify(message="Invalid brand"), 400
-    if pts < brand["min_points"]:
-        return jsonify(message=f"Minimum required for this brand is {brand['min_points']}"), 400
-    if USER["points"] < pts:
-        return jsonify(message="Not enough points"), 400
-
-    USER["points"] -= pts
-    trx_id = len(TRANSACTIONS) + 1
-    trx = {"id": trx_id, "type": "redeem", "points": pts, "brand_id": brand_id, "machine_id": None, "created_at": dt.datetime.utcnow().isoformat()}
-    TRANSACTIONS.append(trx)
-
-    coupon = f"{brand['name'][:3].upper()}-{USER['id']}-{str(trx_id).zfill(4)}"
-    return jsonify(message="Redeem successful", coupon=coupon)
+    return jsonify(message="Redeem successful", coupon="AMZ-0-0001")
 
 
-# ---------------- Machines ---------------
+# ---------------- Machines -----------------
+@app.route("/api/machine/insert", methods=["POST"])
+def machine_insert():
+    return jsonify(
+        message="Points and bottles added successfully",
+        earned_points=10,
+        bottles_added=1,
+        user_total_points=DEMO_USER["points"] + 10,
+        user_total_bottles=DEMO_USER["bottles"] + 1,
+        machine_current_bottles=11,
+        machine_available_space=89,
+        machine_is_full=False
+    )
+
+
 @app.route("/api/machines", methods=["GET"])
 def list_machines():
-    return jsonify(items=MACHINES)
+    return jsonify(items=[
+        {
+            "id": 1,
+            "machine_id": "M001",
+            "name": "RVM Station A",
+            "city": "jim,korea",
+            "lat": 10.823879417459477,
+            "lng": 78.70024710440879,
+            "current_bottles": 10,
+            "max_capacity": 100,
+            "available_space": 90,
+            "is_full": False,
+            "last_emptied": None
+        },
+        {
+            "id": 2,
+            "machine_id": "M002",
+            "name": "RVM Station B",
+            "city": "jim,korea",
+            "lat": 12.9352,
+            "lng": 77.6245,
+            "current_bottles": 20,
+            "max_capacity": 100,
+            "available_space": 80,
+            "is_full": False,
+            "last_emptied": None
+        }
+    ])
 
 
-# ---------------- Run --------------------
+# ---------------- Root ---------------------
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify(message="Demo Polygreen API running (no DB)")
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
