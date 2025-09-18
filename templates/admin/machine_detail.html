@@ -1,0 +1,73 @@
+{% extends "admin/base.html" %}
+{% block title %}Machine Detail{% endblock %}
+
+{% block content %}
+<h2>Machine Detail - {{ machine.name }}</h2>
+
+<!-- Machine Basic Info -->
+<div class="card mb-3">
+  <div class="card-body">
+    <p><strong>ID:</strong> {{ machine.machine_id }}</p>
+    <p><strong>Name:</strong> {{ machine.name }}</p>
+    <p><strong>City:</strong> {{ machine.city }}</p>
+    <p><strong>Bottles collected:</strong> {{ machine.total_bottles }}</p>
+
+
+    <!-- Capacity Progress Bar -->
+    <p><strong> Current Capacity:</strong> {{ machine.current_bottles }} / {{ machine.max_capacity }}</p>
+    <div class="progress mb-3" style="height: 25px;">
+      <div class="progress-bar {% if machine.current_bottles >= machine.max_capacity %}bg-danger{% else %}bg-success{% endif %}" 
+           role="progressbar" 
+           style="width: {{ fill_percentage }}%;" 
+           aria-valuenow="{{ machine.current_bottles }}" 
+           aria-valuemin="0" 
+           aria-valuemax="{{ machine.max_capacity }}">
+        {{ machine.current_bottles }} / {{ machine.max_capacity }}
+      </div>
+    </div>
+    <form action="{{ url_for('admin_empty_machine', machine_id=machine.machine_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to empty this machine?');">
+      <button type="submit" class="btn btn-warning mb-3">
+        Empty Machine
+      </button>
+    </form>
+
+    <!-- Status -->
+    <p><strong>Status:</strong> {% if machine.is_full %}Full{% else %}Available{% endif %}</p>
+    <p><strong>Last Emptied:</strong> {% if machine.last_emptied %}{{ machine.last_emptied.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}N/A{% endif %}</p>
+  </div>
+</div>
+
+<!-- Transactions Table -->
+<h3>Last Transactions</h3>
+{% if transactions %}
+<table class="table table-hover">
+  <thead class="table-light">
+    <tr>
+      <th>ID</th>
+      <th>User ID</th>
+      <th>Type</th>
+      <th>Points</th>
+      <th>Bottles</th>
+      <th>Machine ID</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td>{{ t.id }}</td>
+      <td>{{ t.user_id }}</td>
+      <td>{{ t.type }}</td>
+      <td>{{ t.points }}</td>
+      <td>{{ t.bottles }}</td>
+      <td>{{ t.machine_id }}</td>
+      <td>{{ t.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No transactions found for this machine.</p>
+{% endif %}
+
+{% endblock %}

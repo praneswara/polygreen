@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block title %}User Detail{% endblock %}
+
+{% block content %}
+<h2>User Detail - {{ user.name }}</h2>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <p><strong>ID:</strong> {{ user.id }}</p>
+    <p><strong>Mobile:</strong> {{ user.mobile }}</p>
+    <p><strong>Points:</strong> {{ user.points }}</p>
+    <p><strong>Bottles:</strong> {{ user.bottles }}</p>
+    <p><strong>Registered On:</strong> {{ user.created_at }}</p>
+  </div>
+</div>
+
+<h3>Transactions</h3>
+<table class="table table-hover">
+  <thead class="table-light">
+    <tr>
+      <th>ID</th>
+      <th>Type</th>
+      <th>Points</th>
+      <th>Bottles</th>
+      <th>Machine ID</th>
+      <th>Brand ID</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td>{{ t.id }}</td>
+      <td>{{ t.type }}</td>
+      <td>{{ t.points }}</td>
+      <td>{{ t.bottles }}</td>
+      <td>{{ t.machine_id }}</td>
+      <td>{{ t.brand_id }}</td>
+      <td>{{ t.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
