@@ -166,7 +166,10 @@ def login():
             cur.execute("SELECT * FROM users WHERE mobile=%s", (mobile,))
             u = cur.fetchone()
 
-    if not u or not bcrypt.verify(password, u["password_hash"]):
+    # truncate password to 72 bytes to fix bcrypt limitation
+    password_truncated = password[:72]
+
+    if not u or not bcrypt.verify(password_truncated, u["password_hash"]):
         return jsonify(message="Invalid credentials"), 401
 
     token = create_access_token(
@@ -177,6 +180,7 @@ def login():
         access_token=token,
         user={"id": u["id"], "name": u["name"], "mobile": u["mobile"], "points": u["points"], "bottles": u["bottles"]}
     )
+
 
 # --------------- User endpoints -----------
 @app.route("/api/users/me", methods=["GET"])
@@ -476,4 +480,5 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
