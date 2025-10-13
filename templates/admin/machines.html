@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% block title %}Machines{% endblock %}
+
+{% block content %}
+<style>
+  .card-title{
+    font-size: 25px;
+    color:#006d71;
+  }
+  .btn.full{
+ 
+  background-color: #ff0000;
+  border-radius: 20px;
+  color:white;
+  padding: 4px;
+}
+ .btn.available{
+  
+  background-color: #096709;
+  border-radius: 20px;
+  color:white;
+    padding: 5px;
+ font-size: 12px;
+}
+
+.inner-card{
+  display: flex;
+  justify-content: space-between;
+}
+@media only screen and (max-width: 1000px) {
+ .inner-card{
+   align-items: center;
+   /* justify-content: center; */
+}
+ } 
+ .detail{
+  background-color:#006d71 ;
+  color: white;
+  font-weight: 500;
+  border-radius: 10px;
+ } 
+ .detail:hover{
+   background-color: #029297;
+   color:white;
+ }
+ .addnew{
+  background-color: rgb(35, 35, 218);
+  color:white;
+  font-size: 18px;
+  
+ }
+ .addnew:hover{
+   background-color: rgb(71, 71, 223);
+     color:white;
+  font-size: 18px;
+ }
+</style>
+<h2 class="mb-4 text-center">Machines</h2>
+
+<div class="row">
+  {% for machine in machines %}
+  <div class="col-md-6 ">
+    <div class="card mb-3 shadow">
+      <div class="card-body">
+          <div class="inner-card">     
+             <h5 class="card-title">{{ machine.name }} ({{ machine.machine_id }})</h5>
+                   <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}Full{% else %}Available{% endif %}</strong></p>
+           </div>
+
+                     <p><img src="{{ url_for('static', filename='building.png')}}" 
+                alt="clean" width="30" height="30" class="m-1"><strong>{{ machine.city }}</strong></p>
+                       <p> <a href="{{ url_for('admin_machine_detail', machine_id=machine.machine_id) }}" class="btn detail">Details</a></p>
+
+      
+
+        <!-- <p class="card-text"><strong>City:</strong> {{ machine.city }}</p> -->
+        <!-- <p class="card-text"><strong>Status:</strong>{% if machine.is_full %}Full{% else %}Available{% endif %}</p> -->
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<a href="{{ url_for('admin_add_machine') }}" class="btn mt-3 mb-3 addnew"><img src="{{ url_for('static', filename='plus..png')}}" 
+             alt="plus" width="25" height="25" >   Add New Machine</a>
+
+{% endblock %}

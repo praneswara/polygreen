@@ -1,0 +1,218 @@
+{% extends "admin/base.html" %}
+{% block title %}Machine Detail{% endblock %}
+
+{% block content %}
+<h2 class="text-center">Machine Detail - {{ machine.name }}</h2>
+
+<!-- Machine Basic Info -->
+<div class="card mb-3 mt-3 shadow">
+  <div class="card-body">
+    <div class="header-status">
+          <h2 class="text">   
+            <img src="{{ url_for('static', filename='recycle.png')}}" 
+                alt="clean" width="35" height="35">
+      {{ machine.name }}
+    </h2>
+    <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}Full{% else %}Available{% endif %}</strong></p>
+  </div>
+   
+
+    <p><img src="{{ url_for('static', filename='id.png')}}" 
+                alt="clean" width="30" height="30"  class="m-1"> <strong>{{ machine.machine_id }}</strong></p>
+   
+    <p><img src="{{ url_for('static', filename='building.png')}}" 
+                alt="clean" width="30" height="30" class="m-1"><strong>{{ machine.city }}</strong></p>
+    <p><img src="{{ url_for('static', filename='Bottle.png')}}" 
+                alt="clean" width="30" height="30" class="m-1"><strong> {{ machine.total_bottles }} Bottles Collected</strong> </p>
+
+
+    <!-- Capacity Progress Bar -->
+    <p><strong> Current Capacity:</strong> {{ machine.current_bottles }} / {{ machine.max_capacity }}</p>
+    <div class="progress mb-3" style="height: 25px; background-color:#ccc ;">
+      <div class="progress-bar  {% if machine.current_bottles >= machine.max_capacity %}bg-danger{% else %} progress-meter {% endif %}" 
+           role="progressbar" 
+           style="width: {{ fill_percentage }}%;" 
+           aria-valuenow="{{ machine.current_bottles }}" 
+           aria-valuemin="0" 
+           aria-valuemax="{{ machine.max_capacity }}">
+        {{ machine.current_bottles }} / {{ machine.max_capacity }}
+      </div>
+    </div>
+  <div class="empty-last-update">
+    <form action="{{ url_for('admin_empty_machine', machine_id=machine.machine_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to empty this machine?');">
+      <button type="submit" class="btn button mb-3">
+         <img src="{{ url_for('static', filename='bin.png')}}" 
+               alt="clean" width="25" height="25">
+        Empty Machine
+      </button>
+    </form>
+     <p class="btn last-emptied" ><strong>Last Emptied:<span id= "DateFormat";
+></span></strong></p>
+</div>
+    <!-- Status -->
+  </div>
+</div>
+
+<!-- Transactions Table -->
+<h3 class="text-center fw-bold mb-4">Last Transactions</h3>
+{% if transactions %}
+<div class="table-responsive-lg">
+<table class="table custom-table">
+  <thead  class="header-table">
+    <tr>
+      <th>ID</th>
+      <th>User ID</th>
+      <th>Type</th>
+      <th>Points</th>
+      <th>Bottles</th>
+      <th>Machine ID</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td>{{ t.id }}</td>
+      <td>{{ t.user_id }}</td>
+      <td>{{ t.type }}</td>
+      <td>{{ t.points }}</td>
+      <td>{{ t.bottles }}</td>
+      <td>{{ t.machine_id }}</td>
+      <td>{{ t.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="d-flex justify-content-center align-items-center flex-column">
+  <img src="{{ url_for('static', filename='Empty-amico.png')}}" 
+     alt="admin image" width="500" height="500" class="empty">
+<p class="Empty">Oops..! No transactions found for this machine.</p>
+</div>
+
+
+{% endif %}
+<style>  
+.progress-meter{
+  background-color:#0cad95;
+  color:black;
+  font-weight: 500;
+}
+.header-table th{
+       background-color:#006d71!important;
+       color: white;
+      
+    }
+   
+    table{
+        border-radius: 15px !important;
+  overflow: hidden !important; /* keeps inner borders inside curve */
+    /* box-shadow: 8px 8px 4px rgba(0, 0, 0, 0.3) !important; */
+
+    }
+ 
+  .custom-table th, 
+  .custom-table td {
+    border: 1px solid #006d71; /* inner borders same color */
+    text-align: center;
+   
+  }
+
+
+table.custom-table tbody tr:nth-child(even) td {
+  background-color: #b9ffec !important;
+  color: rgb(0, 0, 0) !important;
+  font-weight: 600;
+}
+
+table.custom-table tbody tr:nth-child(odd) td {
+  background-color: #ffffff !important;
+  color: black !important;
+  font-weight: 600;
+
+}
+.Empty{
+  color:#006d71;
+  font-size: 35px;
+}
+@media only screen and (max-width: 700px) {
+ .empty{
+     height: 200px;
+    width:200px;
+ } 
+ .Empty{
+  font-size: 20px;
+ }
+  }
+  .board{
+   
+  border:2px dotted black;
+
+  }
+.button{
+  background-color: #ffff00!important;
+  color:black;
+  font-weight: 600;
+}
+.button:hover {box-shadow:0 5px 5px 0 rgba(0,0,0,0.6)}
+.text{
+  color:#006d71 !important;
+}
+.btn.full{
+ 
+  background-color: #ff0000;
+  border-radius: 25px;
+  color:white;
+}
+ .btn.available{
+ 
+  background-color: #096709;
+  border-radius: 25px;
+  color:white;
+}
+
+.header-status{
+  display: flex;
+  justify-content:space-between;
+  align-items: center;
+  /* gap:60%; */
+}
+.btn.last-emptied{
+   background-color: #7e7e7e;
+  border-radius: 5px;
+  color:rgb(255, 255, 255);
+}
+.empty-last-update{
+   display: flex;
+  justify-content:space-between;
+  align-items: center;
+}
+</style>
+<script>
+  // var dateAndTime=0;
+  // alert("i am inisde")
+  document.addEventListener("DOMContentLoaded",function UTC(){
+    
+     let lastEmptied = "{{ machine.last_emptied or 'N/A' }}";
+     if(lastEmptied =="N/A"){
+const target = document.getElementById("DateFormat");
+
+      target.textContent=lastEmptied;
+     }
+else{
+
+const date = new Date(lastEmptied);
+
+// console.log(date.toLocaleString()); // Local timezone
+const UTC=date.toUTCString();    // UTC format
+lastEmptied = UTC.replace("GMT", "").trim();
+const target = document.getElementById("DateFormat");
+      target.textContent = lastEmptied;
+
+
+}
+
+  })
+</script>
+
+{% endblock %}

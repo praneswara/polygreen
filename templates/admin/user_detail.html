@@ -1,0 +1,107 @@
+{% extends "admin/base.html" %}
+{% block title %}User Detail{% endblock %}
+
+{% block content %}
+<style>
+  .table tbody tr.table-success td{
+    /* background-color: #0ad039 !important; */
+      background-color: #b9ffec  !important;
+    color: rgb(0, 0, 0) !important;
+     border: 2px solid black !important;
+     text-align: center;
+
+   
+}
+.table tbody tr.table-danger td{
+    background-color: #ffffff !important;
+    color: rgb(0, 0, 0) !important;
+     border: 2px solid black !important;
+          text-align: center;
+
+
+}
+.table-header thead th{
+   background-color:hsl(0, 0%, 100%)!important;
+       color: rgb(0, 0, 0);
+        border: 2px solid black !important;
+             text-align: center;
+
+
+}
+;
+.table{
+ border: 2px solid black !important;
+}
+.text{
+  color:#000000 !important;
+  font-size: 35px;
+  
+}
+.name-card{
+   display: flex;
+  justify-content:space-between;
+  /* align-items: center; */
+}
+.card-title{
+  padding-top: 0; 
+  background-color:#9eddd5;
+}
+</style>
+
+<h2 class="text text-center mb-4">User Detail</h2>
+<div class="d-flex justify-content-center align-items-center">
+<div class="card mb-3 table-responsive-lg shadow" style="width: 40rem;">
+  <div class="card-body p-0">
+    <!-- <h3 class=""></h3> -->
+     <h2 class="text card-title p-3">   
+            <img src="{{ url_for('static', filename='user.png')}}" 
+                alt="clean" width="40" height="40">
+       {{ user.name }}
+    </h2>
+    <div class="name-card p-3"> 
+      <div> <p><img src="{{ url_for('static', filename='id.png')}}" 
+                alt="clean" width="39" height="39"  class="m-1"><strong>{{ user.id }}</strong> </p>
+    <p><img src="{{ url_for('static', filename='phone.png')}}" 
+                alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.mobile }}</strong> </p>
+                 <p><img src="{{ url_for('static', filename='noted.png')}}" 
+                alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.created_at }} </strong> </p></div>
+   
+                <div> <p><img src="{{ url_for('static', filename='points.png')}}" alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.points }}</strong> </p>
+    <p><img src="{{ url_for('static', filename='Bottle.png')}}" 
+                alt="clean" width="30" height="30"  class="m-1"><strong> {{ user.bottles }} Bottles</strong></p></div></div>
+   
+   
+   
+  </div>
+</div>
+</div>
+<h3 class="text text-center mb-4">Transactions</h3>
+<div class="table table-responsive-lg">
+<table class="table table-header">
+  <thead >
+    <tr>
+      <th>ID</th>
+      <th>Type</th>
+      <th>Points</th>
+      <th>Bottles</th>
+      <th>Machine ID</th>
+      <th>Brand ID</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+  <tr class="{% if t.type == 'earn' %}table-success{% elif t.type == 'redeem' %}table-danger{% endif %}">
+      <td>{{ t.id }}</td>
+      <td>{{ t.type }}</td>
+      <td>{{ t.points }}</td>
+      <td>{{ t.bottles }}</td>
+      <td>{{ t.machine_id }}</td>
+      <td>{{ t.brand_id }}</td>
+      <td>{{ t.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

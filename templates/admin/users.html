@@ -1,0 +1,109 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<h2 class="mb-4 text-center">Users</h2>
+<div class="table-responsive-lg">
+<table class="table custom-table">
+  <thead class="header-table">
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Mobile</th>
+      <th>Points</th>
+      <th>Bottles</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody class="table-body">
+    {% for user in users %}
+    <tr>
+      <td>{{ user.id }}</td>
+      <td>{{ user.name }}</td>
+      <td>{{ user.mobile }}</td>
+      <td>{{ user.points }}</td>
+      <td>{{ user.bottles }}</td>
+      <td>
+          
+
+        <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="btn btn-sm border-dark border-2 rounded  fw-semibold text-wrap view">
+          <img src="{{ url_for('static', filename='eye-icons.png')}}" 
+     alt="eye" width="18" height="18" class="icon-disappear  ">
+          View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<style>
+    .header-table th{
+       background-color:#006d71!important;
+       color: white;
+       /* border: #006d71; */
+    }
+    .view{
+      background-color: #039398!important;
+      color: #ffffff !important;
+      border: white;
+    }
+    .view:hover{
+      background-color: #535151!important;
+    }
+    table{
+        border-radius: 15px !important;
+  overflow: hidden !important; /* keeps inner borders inside curve */
+      /* box-shadow: 8px 0px 4px rgba(0, 0, 0, 0.3) !important; */
+
+  
+    }
+  @media only screen and (max-width: 750px) {
+    .icon-disappear{
+      display: none;
+    }
+  }
+  .custom-table th, 
+  .custom-table td {
+    border: 1px solid #006d71; /* inner borders same color */
+    text-align: center;
+   
+  }
+
+ /* table.custom-table td,
+table.custom-table td * {
+  color: red !important;
+} */
+
+/* .custom-table tbody tr td {
+  color: red !important;  /* force text to red */
+/* } */ 
+table.custom-table tbody tr:nth-child(even) td {
+  background-color: #b9ffec !important;
+  color: rgb(0, 0, 0) !important;
+  font-weight: 600;
+}
+
+table.custom-table tbody tr:nth-child(odd) td {
+  background-color: #ffffff !important;
+  color: black !important;
+  font-weight: 600;
+
+}
+/* .tr-earn{
+    background-color: green;
+  }
+.tr-redeem{
+    background-color: red;
+  }
+  <style> */
+.table tbody tr.table-success td{
+    background-color: #28a745 !important;
+    color: white !important;
+}
+.table tbody tr.table-danger td{
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+</style>
+<!-- </style> -->
+{% endblock %}
