@@ -142,7 +142,7 @@ def register():
             cur.execute("SELECT id FROM users WHERE mobile=%s", (mobile,))
             if cur.fetchone():
                 return jsonify(message="mobile already used"), 400
-
+            password = password[:72]
             password_hash = bcrypt.hash(password)
             cur.execute("""
                 INSERT INTO users (name, mobile, password_hash, points, bottles, created_at)
@@ -476,4 +476,5 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
