@@ -339,7 +339,8 @@ def fetchuser():
     return jsonify(
         user_id=u["id"],
         name=u["name"],
-        mobile=u["mobile"]
+        mobile=u["mobile"],
+        points=u["points"]
     )
 
 
@@ -480,5 +481,6 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
