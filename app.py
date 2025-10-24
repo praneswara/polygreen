@@ -85,7 +85,7 @@ def init_db():
                             INSERT INTO users (id, name, mobile, password_hash, points, bottles)
                             VALUES (%s,%s,%s,%s,%s,%s)
                         """, (
-                            0,
+                            1,
                             "BUSANTECH",
                             1234567890,
                             "$2b$12$MyPFgq8vz.EiUK2PlqG3BeWzTjhg9.f8y9W60tpfZ4aQEQ9F6JcBW",
@@ -481,6 +481,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
