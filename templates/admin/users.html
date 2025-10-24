@@ -18,7 +18,7 @@
   <tbody class="table-body">
     {% for user in users %}
     <tr>
-      <td>{{ user.id }}</td>
+      <td>{{ user.user_id }}</td>
       <td>{{ user.name }}</td>
       <td>{{ user.mobile }}</td>
       <td>{{ user.points }}</td>
@@ -107,3 +107,4 @@ table.custom-table tbody tr:nth-child(odd) td {
 </style>
 <!-- </style> -->
 {% endblock %}
+
