@@ -380,7 +380,7 @@ def fetchuser():
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, name, mobile, points FROM users WHERE mobile=%s",
+                "SELECT user_id, name, mobile, points FROM users WHERE mobile=%s",
                 (mobile,)
             )
             u = cur.fetchone()
@@ -534,6 +534,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
