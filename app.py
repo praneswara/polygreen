@@ -40,6 +40,13 @@ def serialize_row(row):
             row[k] = v.isoformat()
     return row
 
+def generate_user_id(name, mobile):
+    # Take first 4 letters of name (lowercase)
+    prefix = name[:4].lower()
+    # Take last 4 digits of mobile
+    suffix = mobile[-4:]
+    return f"{prefix}_{suffix}"
+
 # ------------- Init & seeds --------------
 def init_db():
     """Seed initial data if tables exist and are empty. Will not create tables."""
@@ -82,28 +89,30 @@ def init_db():
                 if cnt == 0:
                     try:
                         cur.execute("""
-                            INSERT INTO users (id, name, mobile, password_hash, points, bottles)
-                            VALUES (%s,%s,%s,%s,%s,%s)
+                            INSERT INTO users (id, user_id, name, mobile, password_hash, points, bottles)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s)
                         """, (
-                            1,
-                            "GUEST",
-                            "01020411593",
-                            "$2b$12$MyPFgq8vz.EiUK2PlqG3BeWzTjhg9.f8y9W60tpfZ4aQEQ9F6JcBW",
-                            100,
-                            10
+                            1,                     # id
+                            "busa_1593",           # user_id
+                            "TEST-USER",           # name
+                            "01020411593",         # mobile
+                            "$2b$12$MyPFgq8vz.EiUK2PlqG3BeWzTjhg9.f8y9W60tpfZ4aQEQ9F6JcBW",  # password_hash
+                            100,                   # points
+                            10                     # bottles
                         ))
                     except Exception:
-                        # fallback: insert without id
+                        # fallback: insert without id and user_id
                         cur.execute("""
                             INSERT INTO users (name, mobile, password_hash, points, bottles)
                             VALUES (%s,%s,%s,%s,%s)
                         """, (
-                            "BUSANTECH",
+                            "TEST-USER",
                             "01020411593",
                             "$2b$12$MyPFgq8vz.EiUK2PlqG3BeWzTjhg9.f8y9W60tpfZ4aQEQ9F6JcBW",
                             100,
                             10
                         ))
+
             conn.commit()
     except psycopg2.errors.UndefinedTable:
         # Tables don't exist yet — user should create them manually in Neon console
@@ -151,25 +160,32 @@ def register():
     name = data.get("name")
     mobile = str(data.get("mobile"))
     password = data.get("password")
+    
     if not (name and mobile and password):
         return jsonify(message="Missing fields"), 400
 
+    user_id = generate_user_id(name, mobile)  # generate custom user_id
+
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM users WHERE mobile=%s", (mobile,))
+            # Check mobile uniqueness
+            cur.execute("SELECT id FROM users WHERE mobile=%s OR user_id=%s", (mobile, user_id))
             if cur.fetchone():
-                return jsonify(message="mobile already used"), 400
+                return jsonify(message="mobile or user_id already used"), 400
 
             password_hash = bcrypt.hash(password)
+
             cur.execute("""
-                INSERT INTO users (name, mobile, password_hash, points, bottles, created_at)
-                VALUES (%s,%s,%s,%s,%s, NOW())
-                RETURNING id
-            """, (name, mobile, password_hash, 0, 0))
-            new_id = cur.fetchone()["id"]
+                INSERT INTO users (user_id, name, mobile, password_hash, points, bottles, created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,NOW())
+                RETURNING id, user_id
+            """, (user_id, name, mobile, password_hash, 0, 0))
+            
+            new_user = cur.fetchone()
         conn.commit()
 
-    return jsonify(message="Registered", id=new_id), 201
+    return jsonify(message="Registered", id=new_user["id"], user_id=new_user["user_id"]), 201
+
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -518,6 +534,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
