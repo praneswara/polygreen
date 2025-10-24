@@ -184,7 +184,7 @@ def register():
             new_user = cur.fetchone()
         conn.commit()
 
-    return jsonify(message="Registered", id=new_user["id"], user_id=new_user["user_id"]), 201
+    return jsonify(message="Registered", user_id=new_user["user_id"]), 201
 
 
 
@@ -218,7 +218,7 @@ def login():
     return jsonify(
         access_token=token,
         user={
-            "id": u["id"],
+            "user_id": u["user_id"],
             "name": u["name"],
             "mobile": u["mobile"],
             "points": u["points"],
@@ -414,7 +414,7 @@ def machine_insert():
     with get_db() as conn:
         with conn.cursor() as cur:
             # fetch user
-            cur.execute("SELECT * FROM users WHERE id=%s", (user_id,))
+            cur.execute("SELECT * FROM users WHERE user_id=%s", (user_id,))
             user = cur.fetchone()
             if not user:
                 return jsonify(message="User not found"), 404
@@ -444,7 +444,7 @@ def machine_insert():
             cur.execute("""
                 UPDATE users
                 SET points = points + %s, bottles = bottles + %s
-                WHERE id=%s
+                WHERE user_id=%s
             """, (earned_points, bottle_count, user_id))
 
             # update machine
@@ -463,7 +463,7 @@ def machine_insert():
             trx_id = cur.fetchone()["id"]
 
             # fetch updated user & machine
-            cur.execute("SELECT id, points, bottles FROM users WHERE id=%s", (user_id,))
+            cur.execute("SELECT user_id, points, bottles FROM users WHERE user_id=%s", (user_id,))
             new_user = cur.fetchone()
             cur.execute("SELECT current_bottles, max_capacity, is_full FROM machines WHERE machine_id=%s", (machine_id,))
             new_machine = cur.fetchone()
@@ -534,6 +534,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
