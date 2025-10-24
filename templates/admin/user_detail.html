@@ -60,7 +60,7 @@
     </h2>
     <div class="name-card p-3"> 
       <div> <p><img src="{{ url_for('static', filename='id.png')}}" 
-                alt="clean" width="39" height="39"  class="m-1"><strong>{{ user.id }}</strong> </p>
+                alt="clean" width="39" height="39"  class="m-1"><strong>{{ user.user_id }}</strong> </p>
     <p><img src="{{ url_for('static', filename='phone.png')}}" 
                 alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.mobile }}</strong> </p>
                  <p><img src="{{ url_for('static', filename='noted.png')}}" 
@@ -105,3 +105,4 @@
 </table>
 </div>
 {% endblock %}
+
