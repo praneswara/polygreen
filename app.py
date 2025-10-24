@@ -111,6 +111,14 @@ def init_db():
     except Exception as e:
         print("init_db: unexpected error:", str(e))
 
+@app.route("/initdb")
+def initdb_route():
+    try:
+        init_db()
+        return "Database initialized successfully!"
+    except Exception as e:
+        return f"Database initialization failed: {e}", 500
+
 
 # -------------- Helpers ------------------
 def get_user_or_404(uid):
@@ -427,11 +435,11 @@ def machine_insert():
 # -------------- Run -----------------------
 if __name__ == "__main__":
     # Ensure app context exists when initializing DB
-    try:
-        with app.app_context():
-            init_db()  # safely create tables and seed
-    except Exception as e:
-        print("init_db error:", e)
+    # try:
+    #     with app.app_context():
+    #         init_db()  # safely create tables and seed
+    # except Exception as e:
+    #     print("init_db error:", e)
     app.run(host="0.0.0.0", port=5000, debug=True)
 
 
@@ -481,6 +489,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
