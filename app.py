@@ -87,7 +87,7 @@ def init_db():
                         """, (
                             1,
                             "GUEST",
-                            '01020411593",
+                            "01020411593",
                             "$2b$12$MyPFgq8vz.EiUK2PlqG3BeWzTjhg9.f8y9W60tpfZ4aQEQ9F6JcBW",
                             100,
                             10
@@ -481,6 +481,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
