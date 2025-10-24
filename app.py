@@ -475,7 +475,7 @@ def machine_insert():
         machine_current_bottles=new_machine["current_bottles"],
         machine_available_space=new_machine["max_capacity"] - new_machine["current_bottles"],
         machine_is_full=bool(new_machine["is_full"])
-    )
+    ), 200
 
 
 # -------------- Run -----------------------
@@ -529,6 +529,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
