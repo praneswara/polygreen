@@ -401,7 +401,7 @@ def fetchuser():
 def machine_insert():
     data = request.get_json() or {}
     machine_id = str(data.get("machine_id", "")).strip()
-    user_id = int(data.get("user_id", 0))
+    user_id = data.get("user_id", 0)
     bottle_count = int(data.get("bottle_count", 1))
     points_per_bottle = int(data.get("points_per_bottle", 10))
 
@@ -534,6 +534,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
