@@ -122,12 +122,21 @@ def initdb_route():
 
 # -------------- Helpers ------------------
 def get_user_or_404(uid):
+    try:
+        uid = int(uid)
+    except (ValueError, TypeError):
+        response = jsonify(message="Invalid user ID")
+        return make_response(response, 400)
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE id=%s", (uid,))
             user = cur.fetchone()
+
     if not user:
-        abort(404, description="User not found")
+        response = jsonify(message="User not found")
+        return make_response(response, 404)
+
     return user
 
 # -------------- Routes -------------------
@@ -140,7 +149,7 @@ def api():
 def register():
     data = request.get_json() or {}
     name = data.get("name")
-    mobile = data.get("mobile")
+    mobile = str(data.get("mobile"))
     password = data.get("password")
     if not (name and mobile and password):
         return jsonify(message="Missing fields"), 400
@@ -166,15 +175,20 @@ def register():
 @app.route("/api/auth/login", methods=["POST"])
 def login():
     data = request.get_json() or {}
-    mobile = data.get("mobile")
-    password = data.get("password", "")
+    mobile = str(data.get("mobile", "")).strip()
+    password = data.get("password", "").strip()
+
+    if not (mobile and password):
+        return jsonify(message="Missing mobile or password"), 400
+
+    if not (mobile.isdigit() and 8 <= len(mobile) <= 15):
+        return jsonify(message="Invalid mobile number format"), 400
 
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE mobile=%s", (mobile,))
             u = cur.fetchone()
 
-    # truncate password to 72 bytes to fix bcrypt limitation
     password_truncated = password[:72]
 
     if not u or not bcrypt.verify(password_truncated, u["password_hash"]):
@@ -184,11 +198,17 @@ def login():
         identity=str(u["id"]),
         additional_claims={"mobile": u["mobile"], "name": u["name"]}
     )
+
     return jsonify(
         access_token=token,
-        user={"id": u["id"], "name": u["name"], "mobile": u["mobile"], "points": u["points"], "bottles": u["bottles"]}
-    )
-
+        user={
+            "id": u["id"],
+            "name": u["name"],
+            "mobile": u["mobile"],
+            "points": u["points"],
+            "bottles": u["bottles"]
+        }
+    ), 200
 
 # --------------- User endpoints -----------
 @app.route("/api/users/me", methods=["GET"])
@@ -336,48 +356,63 @@ def list_machines():
 @app.route("/api/user/fetch", methods=["POST"])
 def fetchuser():
     data = request.get_json() or {}
-    mobile = data.get("mobile")
+    mobile = str(data.get("mobile", "")).strip()
+
+    if not mobile or not mobile.isdigit() or not (8 <= len(mobile) <= 15):
+        return jsonify(message="Invalid mobile number"), 400
+
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, mobile, points FROM users WHERE mobile=%s", (mobile,))
+            cur.execute(
+                "SELECT id, name, mobile, points FROM users WHERE mobile=%s",
+                (mobile,)
+            )
             u = cur.fetchone()
+
     if not u:
-        return jsonify(message="User Not Found & Register in Mobile app"), 401
+        return jsonify(message="User not found. Please register in the mobile app."), 404
 
     return jsonify(
         user_id=u["id"],
         name=u["name"],
         mobile=u["mobile"],
         points=u["points"]
-    )
+    ), 200
+
 
 
 @app.route("/api/machine/insert", methods=["POST"])
 def machine_insert():
     data = request.get_json() or {}
-    machine_id = data.get("machine_id")
-    user_id = data.get("user_id")
+    machine_id = str(data.get("machine_id", "")).strip()
+    user_id = int(data.get("user_id", 0))
     bottle_count = int(data.get("bottle_count", 1))
     points_per_bottle = int(data.get("points_per_bottle", 10))
 
     if not (machine_id and user_id):
         return jsonify(message="machine_id and user_id required"), 400
 
+    if bottle_count <= 0 or points_per_bottle <= 0:
+        return jsonify(message="bottle_count and points_per_bottle must be positive integers"), 400
+
     with get_db() as conn:
         with conn.cursor() as cur:
-            # Get user
+            # fetch user
             cur.execute("SELECT * FROM users WHERE id=%s", (user_id,))
             user = cur.fetchone()
             if not user:
                 return jsonify(message="User not found"), 404
 
-            # Get machine by machine_id (string identifier)
+            # fetch machine
             cur.execute("SELECT * FROM machines WHERE machine_id=%s", (machine_id,))
             machine = cur.fetchone()
             if not machine:
                 return jsonify(message="Machine not found"), 404
 
-            available_space = (machine.get("max_capacity") or 0) - (machine.get("current_bottles") or 0)
+            max_capacity = machine.get("max_capacity") or 0
+            current_bottles = machine.get("current_bottles") or 0
+            available_space = max_capacity - current_bottles
+
             if bottle_count > available_space:
                 return jsonify(
                     message=f"Machine is full! Only {available_space} bottles can be accepted",
@@ -385,41 +420,39 @@ def machine_insert():
                     requested=bottle_count
                 ), 400
 
-            # Determine if machine becomes full
-            new_current = (machine.get("current_bottles") or 0) + bottle_count
-            will_be_full = new_current >= (machine.get("max_capacity") or 0)
-
+            new_current_bottles = current_bottles + bottle_count
+            will_be_full = new_current_bottles >= max_capacity
             earned_points = bottle_count * points_per_bottle
 
-            # Update user points & bottles
-            cur.execute("UPDATE users SET points = points + %s, bottles = bottles + %s WHERE id=%s",
-                        (earned_points, bottle_count, user_id))
+            # update user
+            cur.execute("""
+                UPDATE users
+                SET points = points + %s, bottles = bottles + %s
+                WHERE id=%s
+            """, (earned_points, bottle_count, user_id))
 
-            # Update machine counters
+            # update machine
             cur.execute("""
                 UPDATE machines
-                SET current_bottles = current_bottles + %s,
-                    total_bottles = total_bottles + %s,
-                    is_full = %s
+                SET current_bottles = %s, total_bottles = total_bottles + %s, is_full = %s
                 WHERE machine_id = %s
-            """, (bottle_count, bottle_count, will_be_full, machine_id))
+            """, (new_current_bottles, bottle_count, will_be_full, machine_id))
 
-            # Create transaction
+            # create transaction
             cur.execute("""
                 INSERT INTO transactions (user_id, type, points, bottles, machine_id, created_at)
                 VALUES (%s, %s, %s, %s, %s, NOW())
                 RETURNING id
             """, (user_id, "earn", earned_points, bottle_count, machine_id))
             trx_id = cur.fetchone()["id"]
-        conn.commit()
 
-    # fetch updated user and machine to return accurate values
-    with get_db() as conn:
-        with conn.cursor() as cur:
+            # fetch updated user & machine
             cur.execute("SELECT id, points, bottles FROM users WHERE id=%s", (user_id,))
             new_user = cur.fetchone()
             cur.execute("SELECT current_bottles, max_capacity, is_full FROM machines WHERE machine_id=%s", (machine_id,))
             new_machine = cur.fetchone()
+
+        conn.commit()
 
     return jsonify(
         message="Points and bottles added successfully",
@@ -429,17 +462,13 @@ def machine_insert():
         user_total_bottles=new_user["bottles"],
         machine_current_bottles=new_machine["current_bottles"],
         machine_available_space=new_machine["max_capacity"] - new_machine["current_bottles"],
-        machine_is_full=bool(new_machine["is_full"])
-    )
+        machine_is_full=bool(new_machine["is_full"]),
+        machine_id=machine_id
+    ), 200
+
 
 # -------------- Run -----------------------
 if __name__ == "__main__":
-    # Ensure app context exists when initializing DB
-    # try:
-    #     with app.app_context():
-    #         init_db()  # safely create tables and seed
-    # except Exception as e:
-    #     print("init_db error:", e)
     app.run(host="0.0.0.0", port=5000, debug=True)
 
 
@@ -489,6 +518,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
