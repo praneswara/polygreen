@@ -107,7 +107,7 @@ def admin_users():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, name, mobile, points, bottles, created_at
+            SELECT user_id, name, mobile, points, bottles, created_at
             FROM users
             ORDER BY created_at DESC;
         """)
@@ -127,7 +127,7 @@ def admin_user_detail(user_id):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, name, mobile, points, bottles, created_at
+            SELECT user_id, name, mobile, points, bottles, created_at
             FROM users WHERE id = %s;
         """, (user_id,))
         user = cur.fetchone()
@@ -299,3 +299,4 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
