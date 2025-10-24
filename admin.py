@@ -128,7 +128,7 @@ def admin_user_detail(user_id):
         cur = conn.cursor()
         cur.execute("""
             SELECT user_id, name, mobile, points, bottles, created_at
-            FROM users WHERE id = %s;
+            FROM users WHERE user_id = %s;
         """, (user_id,))
         user = cur.fetchone()
         if not user:
@@ -299,4 +299,5 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
