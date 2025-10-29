@@ -55,7 +55,7 @@
   font-size: 18px;
  }
 </style>
-<h2 class="mb-4 text-center">Machines</h2>
+<h2 class="mb-4 text-center">기계</h2>
 
 <div class="row">
   {% for machine in machines %}
@@ -64,12 +64,12 @@
       <div class="card-body">
           <div class="inner-card">     
              <h5 class="card-title">{{ machine.name }} ({{ machine.machine_id }})</h5>
-                   <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}Full{% else %}Available{% endif %}</strong></p>
+                   <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong></p>
            </div>
 
                      <p><img src="{{ url_for('static', filename='building.png')}}" 
                 alt="clean" width="30" height="30" class="m-1"><strong>{{ machine.city }}</strong></p>
-                       <p> <a href="{{ url_for('admin_machine_detail', machine_id=machine.machine_id) }}" class="btn detail">Details</a></p>
+                       <p> <a href="{{ url_for('admin_machine_detail', machine_id=machine.machine_id) }}" class="btn detail">세부</a></p>
 
       
 
@@ -82,6 +82,7 @@
   {% endfor %}
 </div>
 <a href="{{ url_for('admin_add_machine') }}" class="btn mt-3 mb-3 addnew"><img src="{{ url_for('static', filename='plus..png')}}" 
-             alt="plus" width="25" height="25" >   Add New Machine</a>
+             alt="plus" width="25" height="25" >   새 기계 추가</a>
 
 {% endblock %}
+
