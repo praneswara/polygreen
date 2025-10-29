@@ -2,7 +2,7 @@
 {% block title %}Machine Detail{% endblock %}
 
 {% block content %}
-<h2 class="text-center">Machine Detail - {{ machine.name }}</h2>
+<h2 class="text-center">기계 세부사항 - {{ machine.name }}</h2>
 
 <!-- Machine Basic Info -->
 <div class="card mb-3 mt-3 shadow">
@@ -23,11 +23,11 @@
     <p><img src="{{ url_for('static', filename='building.png')}}" 
                 alt="clean" width="30" height="30" class="m-1"><strong>{{ machine.city }}</strong></p>
     <p><img src="{{ url_for('static', filename='Bottle.png')}}" 
-                alt="clean" width="30" height="30" class="m-1"><strong> {{ machine.total_bottles }} Bottles Collected</strong> </p>
+                alt="clean" width="30" height="30" class="m-1"><strong> {{ machine.total_bottles }} 수집된 병</strong> </p>
 
 
     <!-- Capacity Progress Bar -->
-    <p><strong> Current Capacity:</strong> {{ machine.current_bottles }} / {{ machine.max_capacity }}</p>
+    <p><strong> 현재 용량:</strong> {{ machine.current_bottles }} / {{ machine.max_capacity }}</p>
     <div class="progress mb-3" style="height: 25px; background-color:#ccc ;">
       <div class="progress-bar  {% if machine.current_bottles >= machine.max_capacity %}bg-danger{% else %} progress-meter {% endif %}" 
            role="progressbar" 
@@ -39,14 +39,14 @@
       </div>
     </div>
   <div class="empty-last-update">
-    <form action="{{ url_for('admin_empty_machine', machine_id=machine.machine_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to empty this machine?');">
+    <form action="{{ url_for('admin_empty_machine', machine_id=machine.machine_id) }}" method="POST" onsubmit="return confirm('이 기계를 비우시겠습니까?');">
       <button type="submit" class="btn button mb-3">
          <img src="{{ url_for('static', filename='bin.png')}}" 
                alt="clean" width="25" height="25">
-        Empty Machine
+        빈 기계
       </button>
     </form>
-     <p class="btn last-emptied" ><strong>Last Emptied:<span id= "DateFormat";
+     <p class="btn last-emptied" ><strong>마지막 비움:<span id= "DateFormat";
 ></span></strong></p>
 </div>
     <!-- Status -->
@@ -54,7 +54,7 @@
 </div>
 
 <!-- Transactions Table -->
-<h3 class="text-center fw-bold mb-4">Last Transactions</h3>
+<h3 class="text-center fw-bold mb-4">마지막 거래</h3>
 {% if transactions %}
 <div class="table-responsive-lg">
 <table class="table custom-table">
@@ -87,7 +87,7 @@
 <div class="d-flex justify-content-center align-items-center flex-column">
   <img src="{{ url_for('static', filename='Empty-amico.png')}}" 
      alt="admin image" width="500" height="500" class="empty">
-<p class="Empty">Oops..! No transactions found for this machine.</p>
+<p class="Empty">죄송합니다..! 이 기계에 대한 거래 내역이 없습니다..</p>
 </div>
 
 
@@ -216,3 +216,4 @@ const target = document.getElementById("DateFormat");
 </script>
 
 {% endblock %}
+
