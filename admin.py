@@ -120,7 +120,7 @@ def admin_users():
     return render_template("admin/users.html", users=users)
 
 
-@admin_app.route("/admin/users/<int:user_id>")
+@admin_app.route("/admin/users/<string:user_id>")
 @admin_required
 def admin_user_detail(user_id):
     try:
@@ -299,5 +299,6 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
