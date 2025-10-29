@@ -13,7 +13,7 @@
                 alt="clean" width="35" height="35">
       {{ machine.name }}
     </h2>
-    <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}Full{% else %}Available{% endif %}</strong></p>
+    <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong></p>
   </div>
    
 
@@ -61,12 +61,13 @@
   <thead  class="header-table">
     <tr>
       <th>ID</th>
-      <th>User ID</th>
-      <th>Type</th>
-      <th>Points</th>
-      <th>Bottles</th>
-      <th>Machine ID</th>
-      <th>Date</th>
+      <th>
+사용자 ID</th>
+      <th>유형</th>
+      <th>전철기</th>
+      <th>병</th>
+      <th>머신 ID</th>
+      <th>날짜</th>
     </tr>
   </thead>
   <tbody>
@@ -216,4 +217,5 @@ const target = document.getElementById("DateFormat");
 </script>
 
 {% endblock %}
+
 
