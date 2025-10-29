@@ -48,7 +48,7 @@
 }
 </style>
 
-<h2 class="text text-center mb-4">User Detail</h2>
+<h2 class="text text-center mb-4">사용자 세부정보</h2>
 <div class="d-flex justify-content-center align-items-center">
 <div class="card mb-3 table-responsive-lg shadow" style="width: 40rem;">
   <div class="card-body p-0">
@@ -68,25 +68,25 @@
    
                 <div> <p><img src="{{ url_for('static', filename='points.png')}}" alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.points }}</strong> </p>
     <p><img src="{{ url_for('static', filename='Bottle.png')}}" 
-                alt="clean" width="30" height="30"  class="m-1"><strong> {{ user.bottles }} Bottles</strong></p></div></div>
+                alt="clean" width="30" height="30"  class="m-1"><strong> {{ user.bottles }} 병</strong></p></div></div>
    
    
    
   </div>
 </div>
 </div>
-<h3 class="text text-center mb-4">Transactions</h3>
+<h3 class="text text-center mb-4">업무</h3>
 <div class="table table-responsive-lg">
 <table class="table table-header">
   <thead >
     <tr>
       <th>ID</th>
-      <th>Type</th>
-      <th>Points</th>
-      <th>Bottles</th>
-      <th>Machine ID</th>
-      <th>Brand ID</th>
-      <th>Date</th>
+      <th>
+유형</th>
+      <th>전철기</th>
+      <th>병</th>
+      <th>머신 ID</th>
+      <th>날짜</th>
     </tr>
   </thead>
   <tbody>
@@ -97,7 +97,6 @@
       <td>{{ t.points }}</td>
       <td>{{ t.bottles }}</td>
       <td>{{ t.machine_id }}</td>
-      <td>{{ t.brand_id }}</td>
       <td>{{ t.created_at }}</td>
     </tr>
     {% endfor %}
@@ -105,4 +104,5 @@
 </table>
 </div>
 {% endblock %}
+
 
