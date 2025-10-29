@@ -130,16 +130,10 @@ def initdb_route():
 
 
 # -------------- Helpers ------------------
-def get_user_or_404(uid):
-    try:
-        uid = int(uid)
-    except (ValueError, TypeError):
-        response = jsonify(message="Invalid user ID")
-        return make_response(response, 400)
-
+def get_user_or_404(user_id):
     with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE id=%s", (uid,))
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM users WHERE user_id=%s", (user_id,))
             user = cur.fetchone()
 
     if not user:
@@ -231,8 +225,7 @@ def login():
 @jwt_required()
 def me():
     uid_str = get_jwt_identity()
-    uid = int(uid_str)
-    u = get_user_or_404(uid)
+    u = get_user_or_404(uid_str)
     u = serialize_row(u)
     return jsonify(
         id=u["id"],
@@ -247,24 +240,30 @@ def me():
 @app.route("/api/points/summary", methods=["GET"])
 @jwt_required()
 def points_summary():
-    user_id = get_jwt_identity()
-    u = get_user_or_404(user_id)
+    user_id = get_jwt_identity()  # keep string user_id
+    u = get_user_or_404(user_id)  # matches users.user_id
+
     with get_db() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT id, points, type, created_at
                 FROM transactions
                 WHERE user_id=%s
                 ORDER BY created_at DESC
                 LIMIT 5
-            """, (u["id"],))
+            """, (user_id,))
             recent = cur.fetchall()
 
-    recent = [serialize_row(r) for r in recent]
     return jsonify(
         total_points=u["points"],
-        recent=[{"id": r["id"], "points": r["points"], "created_at": r["created_at"], "type": r["type"]} for r in recent]
+        recent=[{
+            "id": r["id"],
+            "points": r["points"],
+            "type": r["type"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None
+        } for r in recent]
     )
+
 
 @app.route("/api/transactions", methods=["GET"])
 @jwt_required()
@@ -527,6 +526,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
