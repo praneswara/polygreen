@@ -205,7 +205,7 @@ def login():
         return jsonify(message="Invalid credentials"), 401
 
     token = create_access_token(
-        identity=str(u["id"]),
+        identity=str(u["user_id"]),
         additional_claims={"mobile": u["mobile"], "name": u["name"]}
     )
 
@@ -526,6 +526,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
