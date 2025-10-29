@@ -2,17 +2,19 @@
 {% block title %}Users{% endblock %}
 
 {% block content %}
-<h2 class="mb-4 text-center">Users</h2>
+<h2 class="mb-4 text-center">사용자</h2>
 <div class="table-responsive-lg">
 <table class="table custom-table">
   <thead class="header-table">
     <tr>
       <th>ID</th>
-      <th>Name</th>
-      <th>Mobile</th>
-      <th>Points</th>
-      <th>Bottles</th>
-      <th>Action</th>
+      <th>이름</th>
+      <th>
+이동하는</th>
+      <th>
+전철기</th>
+      <th>병</th>
+      <th>행동</th>
     </tr>
   </thead>
   <tbody class="table-body">
@@ -29,7 +31,7 @@
         <a href="{{ url_for('admin_user_detail', user_id=user.user_id) }}" class="btn btn-sm border-dark border-2 rounded  fw-semibold text-wrap view">
           <img src="{{ url_for('static', filename='eye-icons.png')}}" 
      alt="eye" width="18" height="18" class="icon-disappear  ">
-          View</a>
+          보다</a>
       </td>
     </tr>
     {% endfor %}
@@ -107,5 +109,6 @@ table.custom-table tbody tr:nth-child(odd) td {
 </style>
 <!-- </style> -->
 {% endblock %}
+
 
 
