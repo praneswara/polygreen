@@ -247,10 +247,8 @@ def me():
 @app.route("/api/points/summary", methods=["GET"])
 @jwt_required()
 def points_summary():
-    uid_str = get_jwt_identity()
-    uid = int(uid_str)
-    u = get_user_or_404(uid)
-
+    user_id = get_jwt_identity()
+    u = get_user_or_404(user_id)
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -529,6 +527,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
