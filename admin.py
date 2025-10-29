@@ -44,7 +44,10 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
+@admin_app.route('/')
+def home():
+    return render_template("admin/index.html")
+    
 # ---------------- Login ----------------
 @admin_app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
@@ -299,6 +302,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
