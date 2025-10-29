@@ -190,7 +190,7 @@ def admin_machine_detail(machine_id):
             abort(404)
 
         cur.execute("""
-            SELECT id, user_id, type, points, bottles, brand_id, created_at
+            SELECT id, user_id, type, points, bottles, machine_id, created_at
             FROM transactions
             WHERE machine_id = %s
             ORDER BY created_at DESC;
@@ -302,6 +302,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
