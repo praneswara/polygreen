@@ -33,6 +33,8 @@ jwt = JWTManager(app)
 client = vonage.Client(key=VONAGE_API_KEY, secret=VONAGE_API_SECRET)
 sms = vonage.Sms(client)
 
+otp_store = {}
+
 @app.route("/send_otp", methods=["POST"])
 def send_otp():
     data = request.get_json()
@@ -591,6 +593,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
