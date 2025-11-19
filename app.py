@@ -38,7 +38,7 @@ def send_otp():
     if not phone:
         return jsonify({"ok": False, "error": "phone is required"})
 
-    otp = random.randint(100000, 999999)
+    otp = random.randint(1000, 9999)
 
     otp_store[phone] = {
         "otp": otp,
@@ -587,6 +587,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
