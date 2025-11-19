@@ -11,6 +11,10 @@ from passlib.hash import bcrypt
 # Load env
 load_dotenv()
 
+VONAGE_API_KEY = os.getenv("VONAGE_API_KEY")
+VONAGE_API_SECRET = os.getenv("VONAGE_API_SECRET")
+
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "devjwt")
@@ -21,6 +25,63 @@ app.config["JWT_ALGORITHM"] = "HS256"
 
 CORS(app)
 jwt = JWTManager(app)
+
+client = vonage.Client(key=VONAGE_API_KEY, secret=VONAGE_API_SECRET)
+sms = vonage.Sms(client)
+
+@app.route("/send_otp", methods=["POST"])
+def send_otp():
+    data = request.get_json()
+    
+    phone = data.get("phone")  # Example: "+919361038782"
+
+    if not phone:
+        return jsonify({"ok": False, "error": "phone is required"})
+
+    otp = random.randint(100000, 999999)
+
+    otp_store[phone] = {
+        "otp": otp,
+        "expires": time.time() + 300
+    }
+
+    responseData = sms.send_message(
+        {
+            "from": "Vonage",
+            "to": phone,
+            "text": f"Your OTP is {otp}",
+        }
+    )
+
+    status = responseData["messages"][0]["status"]
+
+    if status == "0":
+        return jsonify({"ok": True, "message": "OTP sent successfully"})
+    else:
+        error_text = responseData["messages"][0]["error-text"]
+        return jsonify({"ok": False, "error": error_text})
+
+
+@app.route("/verify_otp", methods=["POST"])
+def verify_otp():
+    data = request.get_json()
+    phone = data.get("phone")
+    otp = data.get("otp")
+
+    if phone not in otp_store:
+        return jsonify({"ok": False, "error": "OTP expired or not found"})
+
+    record = otp_store[phone]
+
+    if time.time() > record["expires"]:
+        return jsonify({"ok": False, "error": "OTP expired"})
+
+    if str(record["otp"]) == str(otp):
+        del otp_store[phone]
+        return jsonify({"ok": True, "message": "OTP verified"})
+    
+    return jsonify({"ok": False, "error": "Incorrect OTP"})
+
 
 # ---------------- DB CONNECTION ----------------
 def get_db():
@@ -526,6 +587,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
