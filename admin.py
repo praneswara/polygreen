@@ -449,6 +449,26 @@ def admin_add_machine():
         return redirect(url_for("admin_machines"))
 
     return render_template("admin/add_machine.html")
+    
+@admin_app.route("/admin/transactions")
+@admin_required
+def admin_transactions():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, user_id, type, points, bottles, machine_id, created_at
+            FROM transactions
+            ORDER BY created_at DESC;
+        """)
+        transactions = cur.fetchall()
+        transactions = [serialize_row(t) for t in transactions]
+    finally:
+        cur.close()
+        conn.close()
+
+    return render_template("admin/transactions.html", transactions=transactions)
+
 
 @admin_app.route("/admin/transactions/report", methods=["POST"])
 @admin_required
@@ -514,6 +534,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
