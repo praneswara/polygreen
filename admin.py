@@ -2,9 +2,12 @@ import os
 import datetime as dt
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort, send_file
 from functools import wraps
 from dotenv import load_dotenv
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 load_dotenv()
 
@@ -33,6 +36,31 @@ def serialize_row(row):
         if isinstance(v, (dt.datetime, dt.date)):
             row[k] = v.isoformat()
     return row
+
+def generate_pdf(title, lines):
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+
+    y = 750
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, title)
+
+    p.setFont("Helvetica", 12)
+    y -= 40
+
+    for line in lines:
+        p.drawString(50, y, str(line))
+        y -= 20
+
+        # New page if needed
+        if y < 50:
+            p.showPage()
+            p.setFont("Helvetica", 12)
+            y = 750
+
+    p.save()
+    buffer.seek(0)
+    return buffer
 
 
 # ---------------- Auth Decorator ----------------
@@ -217,6 +245,138 @@ def admin_machine_detail(machine_id):
         fill_percentage=fill_percentage
     )
 
+@admin_app.route("/admin/users/report")
+@admin_required
+def admin_users_pdf():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT user_id, name, mobile, points, bottles, created_at
+        FROM users ORDER BY created_at DESC;
+    """)
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    lines = []
+    for u in rows:
+        lines.append(
+            f"{u['user_id']} | {u['name']} | {u['mobile']} | Points:{u['points']} | Bottles:{u['bottles']}"
+        )
+
+    pdf = generate_pdf("Users Report", lines)
+    return send_file(pdf, as_attachment=True, download_name="users_report.pdf",
+                     mimetype="application/pdf")
+
+@admin_app.route("/admin/users/<string:user_id>/report")
+@admin_required
+def admin_user_detail_pdf(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM users WHERE user_id=%s;", (user_id,))
+    user = cur.fetchone()
+    if not user:
+        abort(404)
+
+    cur.execute("""
+        SELECT type, points, bottles, machine_id, created_at
+        FROM transactions WHERE user_id=%s ORDER BY created_at DESC;
+    """, (user_id,))
+    transactions = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    lines = [
+        f"USER REPORT",
+        f"User ID: {user['user_id']}",
+        f"Name: {user['name']}",
+        f"Mobile: {user['mobile']}",
+        f"Points: {user['points']}",
+        f"Bottles: {user['bottles']}",
+        "",
+        "TRANSACTIONS:"
+    ]
+
+    for t in transactions:
+        lines.append(
+            f"{t['created_at']} | {t['type']} | +{t['points']}pts | {t['bottles']} bottles | Machine:{t['machine_id']}"
+        )
+
+    pdf = generate_pdf(f"User Report - {user['name']}", lines)
+    return send_file(pdf, as_attachment=True,
+                     download_name=f"{user_id}_report.pdf",
+                     mimetype="application/pdf")
+    
+@admin_app.route("/admin/machines/<string:machine_id>/report")
+@admin_required
+def admin_machine_detail_pdf(machine_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM machines WHERE machine_id=%s;", (machine_id,))
+    machine = cur.fetchone()
+    if not machine:
+        abort(404)
+
+    cur.execute("""
+        SELECT user_id, type, points, bottles, created_at
+        FROM transactions WHERE machine_id=%s ORDER BY created_at DESC;
+    """, (machine_id,))
+    transactions = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    lines = [
+        f"Machine ID: {machine['machine_id']}",
+        f"Name: {machine['name']}",
+        f"City: {machine['city']}",
+        f"Bottles: {machine['current_bottles']} / {machine['max_capacity']}",
+        "",
+        "TRANSACTIONS:"
+    ]
+
+    for t in transactions:
+        lines.append(
+            f"{t['created_at']} | User:{t['user_id']} | {t['type']} | +{t['points']}pts | {t['bottles']} bottles"
+        )
+
+    pdf = generate_pdf(f"Machine Report - {machine_id}", lines)
+    return send_file(pdf, as_attachment=True,
+                     download_name=f"{machine_id}_report.pdf",
+                     mimetype="application/pdf")
+
+
+@admin_app.route("/admin/machines/report")
+@admin_required
+def admin_machines_pdf():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT machine_id, name, city, current_bottles, max_capacity
+        FROM machines ORDER BY id;
+    """)
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    lines = []
+    for m in rows:
+        lines.append(
+            f"{m['machine_id']} | {m['name']} | {m['city']} | {m['current_bottles']}/{m['max_capacity']} bottles"
+        )
+
+    pdf = generate_pdf("Machines Report", lines)
+    return send_file(pdf, as_attachment=True,
+                     download_name="machines_report.pdf",
+                     mimetype="application/pdf")
+
 
 # ---------------- Empty Machine ----------------
 @admin_app.route("/admin/machine/<string:machine_id>/empty", methods=["POST"])
@@ -302,6 +462,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
