@@ -2,109 +2,160 @@
 {% block title %}User Detail{% endblock %}
 
 {% block content %}
-<style>
-  .table tbody tr.table-success td{
-    /* background-color: #0ad039 !important; */
-      background-color: #b9ffec  !important;
-    color: rgb(0, 0, 0) !important;
-     border: 2px solid black !important;
-     text-align: center;
 
-   
+<style>
+.table tbody tr.table-success td{
+    background-color: #b9ffec !important;
+    color: rgb(0, 0, 0) !important;
+    border: 2px solid black !important;
+    text-align: center;
 }
 .table tbody tr.table-danger td{
     background-color: #ffffff !important;
     color: rgb(0, 0, 0) !important;
-     border: 2px solid black !important;
-          text-align: center;
-
-
+    border: 2px solid black !important;
+    text-align: center;
 }
 .table-header thead th{
-   background-color:hsl(0, 0%, 100%)!important;
-       color: rgb(0, 0, 0);
-        border: 2px solid black !important;
-             text-align: center;
-
-
+    background-color:#ffffff!important;
+    color: rgb(0, 0, 0);
+    border: 2px solid black !important;
+    text-align: center;
 }
-;
 .table{
- border: 2px solid black !important;
+    border: 2px solid black !important;
 }
 .text{
-  color:#000000 !important;
-  font-size: 35px;
-  
+    color:#000000 !important;
+    font-size: 35px;
 }
 .name-card{
-   display: flex;
-  justify-content:space-between;
-  /* align-items: center; */
+    display: flex;
+    justify-content:space-between;
 }
 .card-title{
-  padding-top: 0; 
-  background-color:#9eddd5;
+    padding-top: 0; 
+    background-color:#9eddd5;
 }
 </style>
 
 <h2 class="text text-center mb-4">사용자 세부정보</h2>
+
+<!-- USER CARD -->
 <div class="d-flex justify-content-center align-items-center">
 <div class="card mb-3 table-responsive-lg shadow" style="width: 40rem;">
   <div class="card-body p-0">
-    <!-- <h3 class=""></h3> -->
-     <h2 class="text card-title p-3">   
-            <img src="{{ url_for('static', filename='user.png')}}" 
-                alt="clean" width="40" height="40">
-       {{ user.name }}
+
+    <h2 class="text card-title p-3">   
+      <img src="{{ url_for('static', filename='user.png')}}" width="40" height="40">
+      {{ user.name }}
     </h2>
+
     <div class="name-card p-3"> 
-      <div> <p><img src="{{ url_for('static', filename='id.png')}}" 
-                alt="clean" width="39" height="39"  class="m-1"><strong>{{ user.user_id }}</strong> </p>
-    <p><img src="{{ url_for('static', filename='phone.png')}}" 
-                alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.mobile }}</strong> </p>
-                 <p><img src="{{ url_for('static', filename='noted.png')}}" 
-                alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.created_at }} </strong> </p></div>
-   
-                <div> <p><img src="{{ url_for('static', filename='points.png')}}" alt="clean" width="30" height="30"  class="m-1"><strong>{{ user.points }}</strong> </p>
-    <p><img src="{{ url_for('static', filename='Bottle.png')}}" 
-                alt="clean" width="30" height="30"  class="m-1"><strong> {{ user.bottles }} 병</strong></p></div></div>
-   
-   
-   
+      <div>
+        <p><img src="{{ url_for('static', filename='id.png')}}" width="39" height="39" class="m-1">
+          <strong>{{ user.user_id }}</strong></p>
+
+        <p><img src="{{ url_for('static', filename='phone.png')}}" width="30" height="30" class="m-1">
+          <strong>{{ user.mobile }}</strong></p>
+
+        <p><img src="{{ url_for('static', filename='noted.png')}}" width="30" height="30" class="m-1">
+          <strong>{{ user.created_at }}</strong></p>
+      </div>
+
+      <div>
+        <p><img src="{{ url_for('static', filename='points.png')}}" width="30" height="30" class="m-1">
+          <strong>{{ user.points }}</strong></p>
+
+        <p><img src="{{ url_for('static', filename='Bottle.png')}}" width="30" height="30" class="m-1">
+          <strong>{{ user.bottles }} 병</strong></p>
+      </div>
+    </div>
+
   </div>
 </div>
 </div>
+
+
 <h3 class="text text-center mb-4">업무</h3>
+
+
+<!-- ========================= DATE FILTERS ========================= -->
+<div class="row mb-4">
+
+  <!-- Date From -->
+  <div class="col-md-6 mb-2">
+    <label class="fw-bold">날짜 (From):</label>
+    <input type="date" id="dateFrom" class="form-control" onchange="filterTransactions()">
+  </div>
+
+  <!-- Date To -->
+  <div class="col-md-6 mb-2">
+    <label class="fw-bold">날짜 (To):</label>
+    <input type="date" id="dateTo" class="form-control" onchange="filterTransactions()">
+  </div>
+
+</div>
+
+
+<!-- ========================= TRANSACTION TABLE ========================= -->
 <div class="table table-responsive-lg">
-<table class="table table-header">
-  <thead >
+<table class="table table-header" id="userTransactionsTable">
+  <thead>
     <tr>
       <th>ID</th>
-      <th>
-유형</th>
+      <th>유형</th>
       <th>전철기</th>
       <th>병</th>
       <th>머신 ID</th>
       <th>날짜</th>
     </tr>
   </thead>
+
   <tbody>
     {% for t in transactions %}
-  <tr class="{% if t.type == 'earn' %}table-success{% elif t.type == 'redeem' %}table-danger{% endif %}">
+    <tr class="{% if t.type == 'earn' %}table-success{% elif t.type == 'redeem' %}table-danger{% endif %}">
       <td>{{ t.id }}</td>
       <td>{{ t.type }}</td>
       <td>{{ t.points }}</td>
       <td>{{ t.bottles }}</td>
       <td>{{ t.machine_id }}</td>
-      <td>{{ t.created_at }}</td>
+      <td class="trx-date">{{ t.created_at }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
-  <a href="/admin/users/{{ user.user_id }}/report" class="btn btn-primary">Download User PDF</a>
+
+<a href="/admin/users/{{ user.user_id }}/report" class="btn btn-primary">Download User PDF</a>
+
 </div>
+
+
+<!-- ========================= JS FILTER LOGIC ========================= -->
+<script>
+function filterTransactions() {
+    let dateFrom = document.getElementById("dateFrom").value;
+    let dateTo = document.getElementById("dateTo").value;
+
+    let table = document.getElementById("userTransactionsTable");
+    let trs = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < trs.length; i++) { // skip header
+        let row = trs[i];
+        let dateCell = row.querySelector(".trx-date");
+        let trxDate = dateCell ? dateCell.innerText.split("T")[0] : "";
+
+        let show = true;
+
+        // Filter date from
+        if (dateFrom && trxDate < dateFrom) show = false;
+
+        // Filter date to
+        if (dateTo && trxDate > dateTo) show = false;
+
+        row.style.display = show ? "" : "none";
+    }
+}
+</script>
+
 {% endblock %}
-
-
-
