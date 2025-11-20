@@ -47,11 +47,11 @@
   <!-- TRANSACTIONS CARD -->
   <div class="col-md-4">
     <div class="card text-center card-style mb-3 clickable-card"
-        onclick="window.location='/admin/transactions'">
+        onclick="window.location='/admin/transactions'" style="background: linear-gradient(180deg, white, #a8ffe8); border: 2px solid black;">
          <!-- Change URL if you have a dedicated transactions page -->
       
       <div class="card-body d-flex justify-content-center align-items-center flex-column">
-        <img src="{{ url_for('static', filename='transaction.png')}}" width="60" height="60" class="mb-3">
+        <img src="{{ url_for('static', filename='transaction.png')}}" width="70" height="70" class="mb-3">
         <h5 class="card-title">총 거래</h5>
         <p class="display-4 fw-semibold counter" data-target="{{ stats.total_transactions }}">0</p>
       </div>
@@ -83,4 +83,5 @@
 </script>
 
 {% endblock %}
+
 
