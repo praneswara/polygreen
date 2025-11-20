@@ -2,67 +2,106 @@
 {% block title %}Machine Detail{% endblock %}
 
 {% block content %}
+
 <h2 class="text-center">기계 세부사항 - {{ machine.name }}</h2>
 
 <!-- Machine Basic Info -->
 <div class="card mb-3 mt-3 shadow">
   <div class="card-body">
     <div class="header-status">
-          <h2 class="text">   
-            <img src="{{ url_for('static', filename='recycle.png')}}" 
-                alt="clean" width="35" height="35">
-      {{ machine.name }}
-    </h2>
-    <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong></p>
-  </div>
-   
+      <h2 class="text">
+        <img src="{{ url_for('static', filename='recycle.png')}}" width="35" height="35">
+        {{ machine.name }}
+      </h2>
 
-    <p><img src="{{ url_for('static', filename='id.png')}}" 
-                alt="clean" width="30" height="30"  class="m-1"> <strong>{{ machine.machine_id }}</strong></p>
-   
-    <p><img src="{{ url_for('static', filename='building.png')}}" 
-                alt="clean" width="30" height="30" class="m-1"><strong>{{ machine.city }}</strong></p>
-    <p><img src="{{ url_for('static', filename='Bottle.png')}}" 
-                alt="clean" width="30" height="30" class="m-1"><strong> {{ machine.total_bottles }} 수집된 병</strong> </p>
+      <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}">
+        <strong>{% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong>
+      </p>
+    </div>
 
+    <p>
+      <img src="{{ url_for('static', filename='id.png')}}" width="30" height="30" class="m-1">
+      <strong>{{ machine.machine_id }}</strong>
+    </p>
 
-    <!-- Capacity Progress Bar -->
+    <p>
+      <img src="{{ url_for('static', filename='building.png')}}" width="30" height="30" class="m-1">
+      <strong>{{ machine.city }}</strong>
+    </p>
+
+    <p>
+      <img src="{{ url_for('static', filename='Bottle.png')}}" width="30" height="30" class="m-1">
+      <strong>{{ machine.total_bottles }} 수집된 병</strong>
+    </p>
+
     <p><strong> 현재 용량:</strong> {{ machine.current_bottles }} / {{ machine.max_capacity }}</p>
-    <div class="progress mb-3" style="height: 25px; background-color:#ccc ;">
-      <div class="progress-bar  {% if machine.current_bottles >= machine.max_capacity %}bg-danger{% else %} progress-meter {% endif %}" 
-           role="progressbar" 
-           style="width: {{ fill_percentage }}%;" 
-           aria-valuenow="{{ machine.current_bottles }}" 
-           aria-valuemin="0" 
+
+    <div class="progress mb-3" style="height: 25px; background-color:#ccc;">
+      <div class="progress-bar {% if machine.current_bottles >= machine.max_capacity %}bg-danger{% else %}progress-meter{% endif %}"
+           role="progressbar"
+           style="width: {{ fill_percentage }}%;"
+           aria-valuenow="{{ machine.current_bottles }}"
+           aria-valuemin="0"
            aria-valuemax="{{ machine.max_capacity }}">
         {{ machine.current_bottles }} / {{ machine.max_capacity }}
       </div>
     </div>
-  <div class="empty-last-update">
-    <form action="{{ url_for('admin_empty_machine', machine_id=machine.machine_id) }}" method="POST" onsubmit="return confirm('이 기계를 비우시겠습니까?');">
-      <button type="submit" class="btn button mb-3">
-         <img src="{{ url_for('static', filename='bin.png')}}" 
-               alt="clean" width="25" height="25">
-        빈 기계
-      </button>
-    </form>
-     <p class="btn last-emptied" ><strong>마지막 비움:<span id= "DateFormat";
-></span></strong></p>
-</div>
-    <!-- Status -->
+
+    <div class="empty-last-update">
+      <form action="{{ url_for('admin_empty_machine', machine_id=machine.machine_id) }}"
+            method="POST"
+            onsubmit="return confirm('이 기계를 비우시겠습니까?');">
+        <button type="submit" class="btn button mb-3">
+          <img src="{{ url_for('static', filename='bin.png')}}" width="25" height="25">
+          빈 기계
+        </button>
+      </form>
+
+      <p class="btn last-emptied">
+        <strong>마지막 비움: <span id="DateFormat"></span></strong>
+      </p>
+    </div>
+
   </div>
 </div>
 
-<!-- Transactions Table -->
+
+<!-- ========================= FILTERS ========================= -->
 <h3 class="text-center fw-bold mb-4">마지막 거래</h3>
+
 {% if transactions %}
+
+<div class="row mb-4">
+
+  <!-- Search by User ID -->
+  <div class="col-md-4 mb-2">
+    <label class="fw-bold">사용자 ID 검색:</label>
+    <input type="text" id="searchUserId" class="form-control"
+           placeholder="🔍 사용자 ID..." onkeyup="filterTransactions()">
+  </div>
+
+  <!-- Date From -->
+  <div class="col-md-4 mb-2">
+    <label class="fw-bold">날짜 (From):</label>
+    <input type="date" id="dateFrom" class="form-control" onchange="filterTransactions()">
+  </div>
+
+  <!-- Date To -->
+  <div class="col-md-4 mb-2">
+    <label class="fw-bold">날짜 (To):</label>
+    <input type="date" id="dateTo" class="form-control" onchange="filterTransactions()">
+  </div>
+
+</div>
+
+
+<!-- ========================= TRANSACTION TABLE ========================= -->
 <div class="table-responsive-lg">
-<table class="table custom-table">
-  <thead  class="header-table">
+<table class="table custom-table" id="transactionsTable">
+  <thead class="header-table">
     <tr>
       <th>ID</th>
-      <th>
-사용자 ID</th>
+      <th>사용자 ID</th>
       <th>유형</th>
       <th>전철기</th>
       <th>병</th>
@@ -70,6 +109,7 @@
       <th>날짜</th>
     </tr>
   </thead>
+
   <tbody>
     {% for t in transactions %}
     <tr>
@@ -79,145 +119,96 @@
       <td>{{ t.points }}</td>
       <td>{{ t.bottles }}</td>
       <td>{{ t.machine_id }}</td>
-      <td>{{ t.created_at }}</td>
+      <td class="trx-date">{{ t.created_at }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
-  <a href="/admin/machines/{{ machine.machine_id }}/report" class="btn btn-primary">Download Machine PDF</a>
-{% else %}
-<div class="d-flex justify-content-center align-items-center flex-column">
-  <img src="{{ url_for('static', filename='Empty-amico.png')}}" 
-     alt="admin image" width="500" height="500" class="empty">
-<p class="Empty">죄송합니다..! 이 기계에 대한 거래 내역이 없습니다..</p>
+
+<a href="/admin/machines/{{ machine.machine_id }}/report" class="btn btn-primary">
+  Download Machine PDF
+</a>
+
 </div>
 
-
+{% else %}
+<div class="d-flex justify-content-center align-items-center flex-column">
+  <img src="{{ url_for('static', filename='Empty-amico.png')}}" width="500" height="500" class="empty">
+  <p class="Empty">죄송합니다..! 이 기계에 대한 거래 내역이 없습니다..</p>
+</div>
 {% endif %}
-<style>  
-.progress-meter{
-  background-color:#0cad95;
-  color:black;
-  font-weight: 500;
-}
-.header-table th{
-       background-color:#006d71!important;
-       color: white;
-      
-    }
-   
-    table{
-        border-radius: 15px !important;
-  overflow: hidden !important; /* keeps inner borders inside curve */
-    /* box-shadow: 8px 8px 4px rgba(0, 0, 0, 0.3) !important; */
-
-    }
- 
-  .custom-table th, 
-  .custom-table td {
-    border: 1px solid #006d71; /* inner borders same color */
-    text-align: center;
-   
-  }
 
 
-table.custom-table tbody tr:nth-child(even) td {
-  background-color: #b9ffec !important;
-  color: rgb(0, 0, 0) !important;
-  font-weight: 600;
-}
+<!-- ========================= STYLES ========================= -->
+<style>
+.progress-meter { background-color:#0cad95; color:black; font-weight:500;}
+.header-table th { background-color:#006d71!important; color:white; }
+table { border-radius: 15px!important; overflow:hidden!important; }
+.custom-table th, .custom-table td { border:1px solid #006d71; text-align:center; }
 
-table.custom-table tbody tr:nth-child(odd) td {
-  background-color: #ffffff !important;
-  color: black !important;
-  font-weight: 600;
+table.custom-table tbody tr:nth-child(even) td { background-color:#b9ffec!important; font-weight:600; }
+table.custom-table tbody tr:nth-child(odd) td { background-color:#ffffff!important; font-weight:600; }
 
-}
-.Empty{
-  color:#006d71;
-  font-size: 35px;
-}
-@media only screen and (max-width: 700px) {
- .empty{
-     height: 200px;
-    width:200px;
- } 
- .Empty{
-  font-size: 20px;
- }
-  }
-  .board{
-   
-  border:2px dotted black;
+.Empty { color:#006d71; font-size:35px; }
+.button { background-color:#ffff00!important; color:black; font-weight:600; }
+.button:hover { box-shadow:0 5px 5px rgba(0,0,0,0.6); }
 
-  }
-.button{
-  background-color: #ffff00!important;
-  color:black;
-  font-weight: 600;
-}
-.button:hover {box-shadow:0 5px 5px 0 rgba(0,0,0,0.6)}
-.text{
-  color:#006d71 !important;
-}
-.btn.full{
- 
-  background-color: #ff0000;
-  border-radius: 25px;
-  color:white;
-}
- .btn.available{
- 
-  background-color: #096709;
-  border-radius: 25px;
-  color:white;
-}
+.text { color:#006d71!important; }
+.btn.full { background-color:#ff0000; border-radius:25px; color:white; }
+.btn.available { background-color:#096709; border-radius:25px; color:white; }
 
-.header-status{
-  display: flex;
-  justify-content:space-between;
-  align-items: center;
-  /* gap:60%; */
-}
-.btn.last-emptied{
-   background-color: #7e7e7e;
-  border-radius: 5px;
-  color:rgb(255, 255, 255);
-}
-.empty-last-update{
-   display: flex;
-  justify-content:space-between;
-  align-items: center;
+.header-status { display:flex; justify-content:space-between; align-items:center; }
+.btn.last-emptied { background-color:#7e7e7e; color:white; border-radius:5px; }
+
+@media(max-width:700px){
+  .empty { height:200px; width:200px; }
+  .Empty { font-size:20px; }
 }
 </style>
+
+
+<!-- ========================= JS LOGIC (UTC + FILTERS) ========================= -->
 <script>
-  // var dateAndTime=0;
-  // alert("i am inisde")
-  document.addEventListener("DOMContentLoaded",function UTC(){
-    
-     let lastEmptied = "{{ machine.last_emptied or 'N/A' }}";
-     if(lastEmptied =="N/A"){
-const target = document.getElementById("DateFormat");
 
-      target.textContent=lastEmptied;
-     }
-else{
+// Format last emptied date into UTC
+document.addEventListener("DOMContentLoaded", function () {
+    let lastEmptied = "{{ machine.last_emptied or 'N/A' }}";
+    let box = document.getElementById("DateFormat");
 
-const date = new Date(lastEmptied);
-
-// console.log(date.toLocaleString()); // Local timezone
-const UTC=date.toUTCString();    // UTC format
-lastEmptied = UTC.replace("GMT", "").trim();
-const target = document.getElementById("DateFormat");
-      target.textContent = lastEmptied;
+    if (lastEmptied == "N/A") {
+        box.textContent = "N/A";
+    } else {
+        let d = new Date(lastEmptied);
+        box.textContent = d.toUTCString().replace("GMT", "").trim();
+    }
+});
 
 
+// 🔥 Live filtering for search + date range
+function filterTransactions() {
+    let userSearch = document.getElementById("searchUserId").value.toLowerCase();
+    let dateFrom = document.getElementById("dateFrom").value;
+    let dateTo = document.getElementById("dateTo").value;
+
+    let table = document.getElementById("transactionsTable");
+    let trs = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < trs.length; i++) {
+        let row = trs[i];
+        let rowText = row.innerText.toLowerCase();
+        let dateCell = row.querySelector(".trx-date");
+        let trxDate = dateCell ? dateCell.innerText.split("T")[0] : "";
+
+        let show = true;
+
+        if (userSearch && !rowText.includes(userSearch)) show = false;
+        if (dateFrom && trxDate < dateFrom) show = false;
+        if (dateTo && trxDate > dateTo) show = false;
+
+        row.style.display = show ? "" : "none";
+    }
 }
 
-  })
 </script>
 
 {% endblock %}
-
-
-
