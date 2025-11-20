@@ -68,6 +68,39 @@ function filterUsers() {
         }
     }
 }
+    function downloadUsersPDF() {
+
+    const rows = document.querySelectorAll("#usersTable tbody tr");
+    let filtered = [];
+
+    rows.forEach(r => {
+        if (r.style.display !== "none") {  // Only visible rows
+            const cells = r.querySelectorAll("td");
+            filtered.push({
+                user_id: cells[0].innerText,
+                name: cells[1].innerText,
+                mobile: cells[2].innerText,
+                points: cells[3].innerText,
+                bottles: cells[4].innerText
+            });
+        }
+    });
+
+    // Send data to backend
+    fetch("/admin/users/report", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ data: filtered })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "filtered_users.pdf";
+        a.click();
+    });
+}
 </script>
 
 <style>
@@ -110,4 +143,5 @@ function filterUsers() {
 </style>
 
 {% endblock %}
+
 
