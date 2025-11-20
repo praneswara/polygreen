@@ -8,6 +8,12 @@ from dotenv import load_dotenv
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
+pdfmetrics.registerFont(UnicodeCIDFont("HYGothic-Medium"))
+
 
 load_dotenv()
 
@@ -41,21 +47,21 @@ def generate_pdf(title, lines):
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
 
+    # Use Korean-safe font
+    p.setFont("HYGothic-Medium", 16)
     y = 750
-    p.setFont("Helvetica-Bold", 16)
     p.drawString(50, y, title)
 
-    p.setFont("Helvetica", 12)
+    p.setFont("HYGothic-Medium", 12)
     y -= 40
 
     for line in lines:
         p.drawString(50, y, str(line))
         y -= 20
 
-        # New page if needed
         if y < 50:
             p.showPage()
-            p.setFont("Helvetica", 12)
+            p.setFont("HYGothic-Medium", 12)
             y = 750
 
     p.save()
@@ -462,6 +468,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
