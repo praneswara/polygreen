@@ -257,30 +257,73 @@ def admin_machine_detail(machine_id):
         fill_percentage=fill_percentage
     )
 
-@admin_app.route("/admin/users/report")
+@admin_app.route("/admin/users/report", methods=["POST"])
 @admin_required
-def admin_users_pdf():
-    conn = get_db_connection()
-    cur = conn.cursor()
+def export_filtered_users():
 
-    cur.execute("""
-        SELECT user_id, name, mobile, points, bottles, created_at
-        FROM users ORDER BY created_at DESC;
-    """)
-    rows = cur.fetchall()
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    import io
+    from flask import request, send_file, jsonify
 
-    cur.close()
-    conn.close()
+    # Korean font
+    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
-    lines = []
-    for u in rows:
-        lines.append(
-            f"{u['user_id']} | {u['name']} | {u['mobile']} | Points:{u['points']} | Bottles:{u['bottles']}"
-        )
+    payload = request.get_json()
+    if not payload or "data" not in payload:
+        return jsonify({"error": "No data"}), 400
 
-    pdf = generate_pdf("Users Report", lines)
-    return send_file(pdf, as_attachment=True, download_name="users_report.pdf",
-                     mimetype="application/pdf")
+    data = payload["data"]
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
+
+    elements = []
+    elements.append(Paragraph("사용자 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    # Table header
+    table_data = [["ID", "이름", "전화번호", "포인트", "병"]]
+
+    # Insert user rows
+    for u in data:
+        table_data.append([
+            u.get("user_id", ""),
+            u.get("name", ""),
+            u.get("mobile", ""),
+            u.get("points", ""),
+            u.get("bottles", "")
+        ])
+
+    table = Table(table_data, repeatRows=1)
+
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="filtered_users.pdf"
+    )
 
 @admin_app.route("/admin/users/<string:user_id>/report")
 @admin_required
@@ -554,6 +597,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
