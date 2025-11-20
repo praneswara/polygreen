@@ -450,6 +450,52 @@ def admin_add_machine():
 
     return render_template("admin/add_machine.html")
 
+@admin_app.route("/admin/transactions/report", methods=["POST"])
+@admin_required
+def export_filtered_transactions():
+
+    pdfmetrics.registerFont(UnicodeCIDFont("HeiseiMin-W3"))
+
+    data = request.get_json().get("data", [])
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "HeiseiMin-W3"
+    styles["Heading1"].fontName = "HeiseiMin-W3"
+
+    elements = []
+    elements.append(Paragraph("필터링된 거래 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    table_data = [["ID", "User", "Type", "Points", "Bottles", "Machine", "Date"]]
+
+    for t in data:
+        table_data.append([
+            t["id"], t["user_id"], t["type"], t["points"],
+            t["bottles"], t["machine_id"], t["created_at"]
+        ])
+
+    table = Table(table_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "HeiseiMin-W3"),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="filtered_transactions.pdf",
+        mimetype="application/pdf"
+    )
+
 
 # ---------------- Logout ----------------
 @admin_app.route("/admin/logout")
@@ -468,6 +514,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
