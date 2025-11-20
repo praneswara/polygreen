@@ -84,6 +84,7 @@
     {% endfor %}
   </tbody>
 </table>
+  <a href="/admin/machines/{{ machine.machine_id }}/report" class="btn btn-primary">Download Machine PDF</a>
 {% else %}
 <div class="d-flex justify-content-center align-items-center flex-column">
   <img src="{{ url_for('static', filename='Empty-amico.png')}}" 
@@ -217,5 +218,6 @@ const target = document.getElementById("DateFormat");
 </script>
 
 {% endblock %}
+
 
 
