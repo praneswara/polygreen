@@ -3,22 +3,71 @@
 
 {% block content %}
 
-<h2 class="text-center mb-4">전체 거래</h2>
+<style>
+
+/* ===== TABLE THEME (Same as User Detail Page) ===== */
+
+.table tbody tr.table-success td{
+    background-color: #b9ffec !important;
+    color: rgb(0, 0, 0) !important;
+    border: 2px solid black !important;
+    text-align: center;
+}
+
+.table tbody tr.table-danger td{
+    background-color: #ffffff !important;
+    color: rgb(0, 0, 0) !important;
+    border: 2px solid black !important;
+    text-align: center;
+}
+
+.header-table th{
+    background-color:#ffffff!important;
+    color: black;
+    border: 2px solid black !important;
+    text-align: center;
+}
+
+.custom-table td{
+    border: 2px solid black !important;
+    text-align: center;
+}
+
+.custom-table{
+    border: 2px solid black !important;
+}
+
+/* Title style used everywhere */
+.text {
+    color:#000000 !important;
+    font-size: 35px;
+}
+
+/* Filter label bold */
+label.fw-bold {
+    font-size: 16px;
+}
+
+</style>
+
+
+<h2 class="text text-center mb-4">전체 거래</h2>
+
 
 <!-- ================= FILTERS ================= -->
 <div class="row mb-4">
 
-  <div class="col-md-3">
+  <div class="col-md-3 mb-2">
     <label class="fw-bold">사용자 ID</label>
     <input type="text" id="searchUser" class="form-control" onkeyup="filterData()">
   </div>
 
-  <div class="col-md-3">
+  <div class="col-md-3 mb-2">
     <label class="fw-bold">머신 ID</label>
     <input type="text" id="searchMachine" class="form-control" onkeyup="filterData()">
   </div>
 
-  <div class="col-md-2">
+  <div class="col-md-2 mb-2">
     <label class="fw-bold">유형</label>
     <select id="typeFilter" class="form-control" onchange="filterData()">
         <option value="">All</option>
@@ -27,19 +76,22 @@
     </select>
   </div>
 
-  <div class="col-md-2">
+  <div class="col-md-2 mb-2">
     <label class="fw-bold">From</label>
     <input type="date" id="dateFrom" class="form-control" onchange="filterData()">
   </div>
 
-  <div class="col-md-2">
+  <div class="col-md-2 mb-2">
     <label class="fw-bold">To</label>
     <input type="date" id="dateTo" class="form-control" onchange="filterData()">
   </div>
+
 </div>
 
+
 <!-- ==== DOWNLOAD BUTTON ==== -->
-<button class="btn btn-primary mb-3" onclick="downloadFilteredPDF()">📄 Download Filtered PDF</button>
+<button class="btn btn-primary mb-3">📄 Download Filtered PDF</button>
+
 
 <!-- ================= TABLE ================= -->
 <div class="table-responsive-lg">
@@ -58,7 +110,7 @@
 
     <tbody>
         {% for t in transactions %}
-        <tr>
+        <tr class="{% if t.type == 'earn' %}table-success{% else %}table-danger{% endif %}">
             <td>{{ t.id }}</td>
             <td>{{ t.user_id }}</td>
             <td>{{ t.type }}</td>
@@ -73,8 +125,10 @@
 </div>
 
 
-<!-- ============ FRONT-END FILTERING + EXPORT ============= -->
+
+<!-- ============ FILTER + PDF JS ============= -->
 <script>
+
 function filterData() {
     const user = document.getElementById("searchUser").value.toLowerCase();
     const machine = document.getElementById("searchMachine").value.toLowerCase();
@@ -101,7 +155,7 @@ function filterData() {
 }
 
 
-// 🔥 Collect visible table rows and send to backend for PDF
+// PDF
 function downloadFilteredPDF() {
     const rows = document.querySelectorAll("#transactionsTable tbody tr");
     let filtered = [];
@@ -132,11 +186,10 @@ function downloadFilteredPDF() {
         const a = document.createElement("a");
         a.href = url;
         a.download = "filtered_transactions.pdf";
-        document.body.appendChild(a);
         a.click();
-        a.remove();
     });
 }
+
 </script>
 
 {% endblock %}
