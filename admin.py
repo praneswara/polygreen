@@ -480,31 +480,30 @@ def admin_transactions():
 @admin_required
 def export_filtered_transactions():
 
-    # Register Japanese/Korean font
-    pdfmetrics.registerFont(UnicodeCIDFont("HeiseiMin-W3"))
+    # Register Korean Font
+    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
-    # Receive JSON from frontend
     payload = request.get_json()
     if not payload or "data" not in payload:
         return jsonify({"error": "No data provided"}), 400
 
     data = payload["data"]
 
-    # Create PDF buffer
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
 
     styles = getSampleStyleSheet()
-    styles["Normal"].fontName = "HeiseiMin-W3"
-    styles["Heading1"].fontName = "HeiseiMin-W3"
+    styles["Normal"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
     elements = []
     elements.append(Paragraph("필터링된 거래 보고서", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # Build table data
-    table_data = [["ID", "User", "Type", "Points", "Bottles", "Machine", "Date"]]
+    # Table header
+    table_data = [["ID", "사용자 ID", "유형", "전철기", "병", "머신 ID", "날짜"]]
 
+    # Table rows
     for t in data:
         table_data.append([
             t.get("id", ""),
@@ -513,13 +512,13 @@ def export_filtered_transactions():
             t.get("points", ""),
             t.get("bottles", ""),
             t.get("machine_id", ""),
-            t.get("created_at", "")
+            t.get("created_at", ""),
         ])
 
     table = Table(table_data, repeatRows=1)
 
     table.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (-1, -1), "HeiseiMin-W3"),
+        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
@@ -555,6 +554,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
