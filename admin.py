@@ -447,8 +447,8 @@ def export_filtered_machines():
 
     # ------------------ TABLE HEADER ------------------
     header = [
-        "Machine ID", "Name", "City", "Lat", "Lng", 
-        "Current", "Max", "Total", "Full?", "Last Emptied", "Created"
+        "Machine ID", "Name", "City",
+        "Current", "Max", "Total", "Full?", "Last Emptied"
     ]
 
     table_data = [header]
@@ -459,18 +459,15 @@ def export_filtered_machines():
             m.get("machine_id", ""),
             m.get("name", ""),
             m.get("city", ""),
-            m.get("lat", ""),
-            m.get("lng", ""),
             m.get("current_bottles", ""),
             m.get("max_capacity", ""),
             m.get("total_bottles", ""),
             m.get("is_full", ""),
             m.get("last_emptied", ""),
-            m.get("created_at", ""),
         ])
 
     # ------------------ AUTO-COLUMN WIDTH ------------------
-    col_widths = [60, 70, 60, 40, 40, 45, 45, 45, 40, 80, 80]
+    col_widths = [60, 70, 60, 45, 45, 45, 40, 80]
 
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
 
@@ -746,6 +743,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
