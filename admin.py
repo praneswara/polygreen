@@ -454,32 +454,68 @@ def admin_machine_detail_pdf(machine_id):
                      download_name=f"{machine_id}_report.pdf",
                      mimetype="application/pdf")
 
-
-@admin_app.route("/admin/machines/report")
+@admin_app.route("/admin/machines/report", methods=["POST"])
 @admin_required
 def admin_machines_pdf():
-    conn = get_db_connection()
-    cur = conn.cursor()
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    import io
+    from flask import request, send_file, jsonify
 
-    cur.execute("""
-        SELECT machine_id, name, city, current_bottles, max_capacity
-        FROM machines ORDER BY id;
-    """)
-    rows = cur.fetchall()
+    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
-    cur.close()
-    conn.close()
+    payload = request.get_json()
+    if not payload or "data" not in payload:
+        return jsonify({"error": "No data"}), 400
 
-    lines = []
-    for m in rows:
-        lines.append(
-            f"{m['machine_id']} | {m['name']} | {m['city']} | {m['current_bottles']}/{m['max_capacity']} bottles"
-        )
+    data = payload["data"]
 
-    pdf = generate_pdf("Machines Report", lines)
-    return send_file(pdf, as_attachment=True,
-                     download_name="machines_report.pdf",
-                     mimetype="application/pdf")
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
+
+    elements = []
+    elements.append(Paragraph("기계 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    table_data = [["기계 ID", "이름", "도시", "상태"]]
+
+    for m in data:
+        table_data.append([
+            m.get("machine_id", ""),
+            m.get("name", ""),
+            m.get("city", ""),
+            m.get("status", "")
+        ])
+
+    table = Table(table_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="filtered_machines.pdf"
+    )
+
 
 
 # ---------------- Empty Machine ----------------
@@ -646,6 +682,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
