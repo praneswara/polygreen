@@ -244,8 +244,28 @@ def register():
             
             new_user = cur.fetchone()
         conn.commit()
-
-    return jsonify(message="Registered", user_id=new_user["user_id"]), 201
+        
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE mobile=%s", (mobile,))
+            u = cur.fetchone()
+            
+    token = create_access_token(
+        identity=str(u["user_id"]),
+        additional_claims={"mobile": u["mobile"], "name": u["name"]}
+    )
+    
+    return jsonify(
+        message="Registered",
+        access_token=token,
+        user={
+            "user_id": u["user_id"],
+            "name": u["name"],
+            "mobile": u["mobile"],
+            "points": u["points"],
+            "bottles": u["bottles"]
+        }
+    ), 201
 
 
 
@@ -593,6 +613,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
