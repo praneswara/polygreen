@@ -325,46 +325,95 @@ def export_filtered_users():
         download_name="filtered_users.pdf"
     )
 
-@admin_app.route("/admin/users/<string:user_id>/report")
+@admin_app.route("/admin/users/<string:user_id>/report", methods=["POST"])
 @admin_required
-def admin_user_detail_pdf(user_id):
+def export_individual_user_report(user_id):
+
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    import io
+    from flask import request, send_file, abort
+
+    # Korean font
+    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
+
+    # Fetch user details
     conn = get_db_connection()
     cur = conn.cursor()
-
     cur.execute("SELECT * FROM users WHERE user_id=%s;", (user_id,))
     user = cur.fetchone()
     if not user:
         abort(404)
 
-    cur.execute("""
-        SELECT type, points, bottles, machine_id, created_at
-        FROM transactions WHERE user_id=%s ORDER BY created_at DESC;
-    """, (user_id,))
-    transactions = cur.fetchall()
+    payload = request.get_json()
+    data = payload.get("data", [])
 
-    cur.close()
-    conn.close()
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
 
-    lines = [
-        f"USER REPORT",
-        f"User ID: {user['user_id']}",
-        f"Name: {user['name']}",
-        f"Mobile: {user['mobile']}",
-        f"Points: {user['points']}",
-        f"Bottles: {user['bottles']}",
-        "",
-        "TRANSACTIONS:"
-    ]
+    styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
-    for t in transactions:
-        lines.append(
-            f"{t['created_at']} | {t['type']} | +{t['points']}pts | {t['bottles']} bottles | Machine:{t['machine_id']}"
-        )
+    elements = []
 
-    pdf = generate_pdf(f"User Report - {user['name']}", lines)
-    return send_file(pdf, as_attachment=True,
-                     download_name=f"{user_id}_report.pdf",
-                     mimetype="application/pdf")
+    # Title
+    elements.append(Paragraph("사용자 거래 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    # User details section
+    user_info = f"""
+    사용자 ID: {user['user_id']}<br/>
+    이름: {user['name']}<br/>
+    전화번호: {user['mobile']}<br/>
+    포인트: {user['points']}<br/>
+    병 수: {user['bottles']}<br/>
+    생성 날짜: {user['created_at']}
+    """
+
+    elements.append(Paragraph(user_info, styles["Normal"]))
+    elements.append(Spacer(1, 15))
+
+    # Table header
+    table_data = [["ID", "유형", "전철기", "병", "머신 ID", "날짜"]]
+
+    # Add transactions
+    for t in data:
+        table_data.append([
+            t.get("id", ""),
+            t.get("type", ""),
+            t.get("points", ""),
+            t.get("bottles", ""),
+            t.get("machine_id", ""),
+            t.get("created_at", ""),
+        ])
+
+    table = Table(table_data, repeatRows=1)
+
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("GRID", (0,0), (-1,-1), 0.7, colors.black),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"{user_id}_filtered_report.pdf"
+    )
+
     
 @admin_app.route("/admin/machines/<string:machine_id>/report")
 @admin_required
@@ -597,6 +646,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
