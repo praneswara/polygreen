@@ -540,44 +540,84 @@ def export_filtered_machines():
 
 
 
-@admin_app.route("/admin/machines/<string:machine_id>/report")
+@admin_app.route("/admin/machines/<string:machine_id>/report-filtered", methods=["POST"])
 @admin_required
-def admin_machine_detail_pdf(machine_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
+def admin_machine_filtered_pdf(machine_id):
 
-    cur.execute("SELECT * FROM machines WHERE machine_id=%s;", (machine_id,))
-    machine = cur.fetchone()
-    if not machine:
-        abort(404)
+    payload = request.get_json()
+    machine = payload.get("machine", {})
+    transactions = payload.get("transactions", [])
 
-    cur.execute("""
-        SELECT user_id, type, points, bottles, created_at
-        FROM transactions WHERE machine_id=%s ORDER BY created_at DESC;
-    """, (machine_id,))
-    transactions = cur.fetchall()
+    # Korean font
+    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
-    cur.close()
-    conn.close()
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
-    lines = [
-        f"Machine ID: {machine['machine_id']}",
-        f"Name: {machine['name']}",
-        f"City: {machine['city']}",
-        f"Bottles: {machine['current_bottles']} / {machine['max_capacity']}",
-        "",
-        "TRANSACTIONS:"
+    elements = []
+
+    # Title
+    elements.append(Paragraph("기계 상세 보고서 (Machine Detail Report)", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    # Machine Info Table
+    info_data = [
+        ["Machine ID", machine.get("machine_id")],
+        ["Name", machine.get("name")],
+        ["City", machine.get("city")],
+        ["Latitude", machine.get("lat")],
+        ["Longitude", machine.get("lng")],
+        ["Total Bottles", machine.get("total")],
+        ["Current Capacity", f"{machine.get('current')} / {machine.get('max')}"],
+        ["Is Full", machine.get("full")],
+        ["Created At", machine.get("created_at")],
+        ["Last Emptied", machine.get("last_emptied")],
     ]
 
-    for t in transactions:
-        lines.append(
-            f"{t['created_at']} | User:{t['user_id']} | {t['type']} | +{t['points']}pts | {t['bottles']} bottles"
-        )
+    info_table = Table(info_data, colWidths=[120, 300])
+    info_table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.black),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "LEFT"),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+    ]))
 
-    pdf = generate_pdf(f"Machine Report - {machine_id}", lines)
-    return send_file(pdf, as_attachment=True,
-                     download_name=f"{machine_id}_report.pdf",
-                     mimetype="application/pdf")
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+
+    # Transactions Table
+    table_data = [["ID", "User ID", "Type", "Points", "Bottles", "Date"]]
+    for t in transactions:
+        table_data.append([
+            t["id"], t["user_id"], t["type"], t["points"],
+            t["bottles"], t["created_at"]
+        ])
+
+    trx_table = Table(table_data, repeatRows=1)
+    trx_table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.black),
+    ]))
+
+    elements.append(trx_table)
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f"{machine_id}_filtered_report.pdf",
+        mimetype="application/pdf"
+    )
 
 # ---------------- Empty Machine ----------------
 @admin_app.route("/admin/machine/<string:machine_id>/empty", methods=["POST"])
@@ -743,6 +783,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
