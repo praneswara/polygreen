@@ -414,27 +414,34 @@ def export_individual_user_report(user_id):
         download_name=f"{user_id}_filtered_report.pdf"
     )
 
-@admin_app.route("/admin/machines/report")
+@admin_app.route("/admin/machines/report", methods=["GET"])
 @admin_required
 def admin_machines_pdf():
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+    import io
 
-    # Register Korean Font
+    # Korean Font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT id, machine_id, name, city, lat, lng, current_bottles, max_capacity,
+        SELECT machine_id, name, city, lat, lng, current_bottles, max_capacity,
                total_bottles, is_full, last_emptied, created_at
-        FROM machines
-        ORDER BY id;
+        FROM machines ORDER BY id;
     """)
-    rows = cur.fetchall()
+    machines = cur.fetchall()
 
     cur.close()
     conn.close()
 
+    # PDF buffer
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -444,28 +451,22 @@ def admin_machines_pdf():
 
     elements = []
     elements.append(Paragraph("기계 전체 보고서", styles["Heading1"]))
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 14))
 
-    # Table header
+    # TABLE HEADER
     table_data = [[
-        "ID",
-        "Machine ID",
-        "Name",
-        "City",
-        "Lat",
-        "Lng",
-        "Current",
-        "Max",
+        "Machine ID", "Name", "City",
+        "Lat", "Lng",
+        "Current", "Max",
         "Total Bottles",
-        "Full?",
+        "Status",
         "Last Emptied",
-        "Created At"
+        "Created"
     ]]
 
-    # Add rows
-    for m in rows:
+    # ROWS
+    for m in machines:
         table_data.append([
-            m["id"],
             m["machine_id"],
             m["name"],
             m["city"],
@@ -474,20 +475,19 @@ def admin_machines_pdf():
             m["current_bottles"],
             m["max_capacity"],
             m["total_bottles"],
-            "Yes" if m["is_full"] else "No",
+            "Full" if m["is_full"] else "Available",
             str(m["last_emptied"]),
             str(m["created_at"])
         ])
 
-    # Build table
     table = Table(table_data, repeatRows=1)
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
     ]))
 
     elements.append(table)
@@ -500,6 +500,7 @@ def admin_machines_pdf():
         download_name="machines_report_full.pdf",
         mimetype="application/pdf"
     )
+
 
 
 @admin_app.route("/admin/machines/<string:machine_id>/report")
@@ -705,6 +706,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
