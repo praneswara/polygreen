@@ -2,95 +2,94 @@
 {% block title %}Machines{% endblock %}
 
 {% block content %}
+
 <style>
   .card-title{
     font-size: 25px;
     color:#006d71;
   }
   .btn.full{
- 
-  background-color: #ff0000;
-  border-radius: 20px;
-  color:white;
-  padding: 4px;
-}
- .btn.available{
-  
-  background-color: #096709;
-  border-radius: 20px;
-  color:white;
+    background-color: #ff0000;
+    border-radius: 20px;
+    color:white;
+    padding: 4px;
+  }
+  .btn.available{
+    background-color: #096709;
+    border-radius: 20px;
+    color:white;
     padding: 5px;
- font-size: 12px;
-}
-
-.inner-card{
-  display: flex;
-  justify-content: space-between;
-}
-@media only screen and (max-width: 1000px) {
- .inner-card{
-   align-items: center;
-   /* justify-content: center; */
-}
- } 
- .detail{
-  background-color:#006d71 ;
-  color: white;
-  font-weight: 500;
-  border-radius: 10px;
- } 
- .detail:hover{
-   background-color: #029297;
-   color:white;
- }
- .addnew{
-  background-color: rgb(35, 35, 218);
-  color:white;
-  font-size: 18px;
-  
- }
- .addnew:hover{
-   background-color: rgb(71, 71, 223);
-     color:white;
-  font-size: 18px;
- }
+    font-size: 12px;
+  }
+  .inner-card{
+    display: flex;
+    justify-content: space-between;
+  }
+  .detail{
+    background-color:#006d71;
+    color:white;
+    font-weight:500;
+    border-radius:10px;
+  }
+  .detail:hover{
+    background-color:#029297;
+  }
+  .addnew{
+    background-color: rgb(35,35,218);
+    color:white;
+    font-size:18px;
+  }
+  .addnew:hover{
+    background-color: rgb(71,71,223);
+  }
 </style>
+
 <h2 class="mb-4 text-center">기계</h2>
+
+<!-- 🔍 SEARCH -->
 <input 
-    type="text"
-    id="machineSearch"
-    class="form-control mb-3"
-    placeholder="🔍 기계 ID, 이름, 도시 검색..."
-    onkeyup="filterMachines()">
+  type="text"
+  id="machineSearch"
+  class="form-control mb-3"
+  placeholder="🔍 기계 ID, 이름, 도시 검색..."
+  onkeyup="filterMachines()">
 
 <div class="row">
   {% for machine in machines %}
-  <div class="col-md-6 ">
+  <div class="col-md-6">
     <div class="card mb-3 shadow machine-card">
       <div class="card-body">
-          <div class="inner-card">     
-             <h5 class="card-title machine-name">{{ machine.name }} (<span class="machine-id">{{ machine.machine_id }}</span>)</h5>
-                   <p class="btn {% if machine.is_full %}full{% else %}available{% endif %} machine-status">
-    <strong>{% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong>
-</p>
-           </div>
 
-                     <p><img src="{{ url_for('static', filename='building.png')}}" 
-                alt="clean" width="30" height="30" class="m-1"><strong class="machine-city">{{ machine.city }}</strong></p>
-                       <p> <a href="{{ url_for('admin_machine_detail', machine_id=machine.machine_id) }}" class="btn detail">세부</a></p>
+        <div class="inner-card">
+          <h5 class="card-title machine-name">{{ machine.name }}</h5>
+          <p class="machine-id d-none">{{ machine.machine_id }}</p>
+          <p class="btn {% if machine.is_full %}full{% else %}available{% endif %} machine-status">
+            <strong>{% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong>
+          </p>
+        </div>
 
-      
+        <p><strong class="machine-city">{{ machine.city }}</strong></p>
 
-        <!-- <p class="card-text"><strong>City:</strong> {{ machine.city }}</p> -->
-        <!-- <p class="card-text"><strong>Status:</strong>{% if machine.is_full %}Full{% else %}Available{% endif %}</p> -->
+        <p class="d-none machine-current">{{ machine.current_bottles }}</p>
+        <p class="d-none machine-max">{{ machine.max_capacity }}</p>
+        <p class="d-none machine-total">{{ machine.total_bottles }}</p>
+        <p class="d-none machine-lat">{{ machine.lat }}</p>
+        <p class="d-none machine-lng">{{ machine.lng }}</p>
+        <p class="d-none machine-last">{{ machine.last_emptied }}</p>
 
+        <a href="{{ url_for('admin_machine_detail', machine_id=machine.machine_id) }}" class="btn detail">
+          세부
+        </a>
       </div>
     </div>
   </div>
   {% endfor %}
 </div>
-<a href="{{ url_for('admin_add_machine') }}" class="btn mt-3 mb-3 addnew"><img src="{{ url_for('static', filename='plus..png')}}" 
-             alt="plus" width="25" height="25" >   새 기계 추가</a>
+
+<a href="{{ url_for('admin_add_machine') }}" class="btn mt-3 mb-3 addnew">
+  <img src="{{ url_for('static', filename='plus..png') }}" width="25"> 새 기계 추가
+</a>
+
 <button class="btn btn-primary" onclick="downloadMachinesPDF()">📄 Download Machines PDF</button>
 
 <script>
@@ -103,36 +102,37 @@ function filterMachines() {
         card.style.display = text.includes(input) ? "" : "none";
     });
 }
-  function downloadMachinesPDF() {
 
+function downloadMachinesPDF() {
     const cards = document.querySelectorAll(".machine-card");
     let filtered = [];
 
     cards.forEach(card => {
         if (card.style.display !== "none") {
 
-            let machine_id = card.querySelector(".machine-id").innerText.trim();
-            let name = card.querySelector(".machine-name").innerText.trim();
-            let city = card.querySelector(".machine-city").innerText.trim();
-            let status = card.querySelector(".machine-status").innerText.trim();
-
             filtered.push({
-                machine_id,
-                name,
-                city,
-                status
+                machine_id: card.querySelector(".machine-id").innerText.trim(),
+                name: card.querySelector(".machine-name").innerText.trim(),
+                city: card.querySelector(".machine-city").innerText.trim(),
+                status: card.querySelector(".machine-status").innerText.trim(),
+                current: card.querySelector(".machine-current").innerText.trim(),
+                max: card.querySelector(".machine-max").innerText.trim(),
+                total: card.querySelector(".machine-total").innerText.trim(),
+                lat: card.querySelector(".machine-lat").innerText.trim(),
+                lng: card.querySelector(".machine-lng").innerText.trim(),
+                last_emptied: card.querySelector(".machine-last").innerText.trim()
             });
         }
     });
 
     fetch("/admin/machines/report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ data: filtered })
     })
     .then(res => res.blob())
     .then(blob => {
-        const url = window.URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = "filtered_machines.pdf";
@@ -142,6 +142,3 @@ function filterMachines() {
 </script>
 
 {% endblock %}
-
-
-
