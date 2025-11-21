@@ -126,7 +126,10 @@
   </tbody>
 </table>
 
-<a href="/admin/users/{{ user.user_id }}/report" class="btn btn-primary">Download User PDF</a>
+<button class="btn btn-primary" onclick="downloadUserPDF('{{ user.user_id }}')">
+    📄 Download User PDF
+</button>
+
 
 </div>
 
@@ -156,6 +159,40 @@ function filterTransactions() {
         row.style.display = show ? "" : "none";
     }
 }
+    function downloadUserPDF(userId) {
+
+    const rows = document.querySelectorAll("#userTransactionsTable tbody tr");
+    let filtered = [];
+
+    rows.forEach(r => {
+        if (r.style.display !== "none") {
+            const c = r.querySelectorAll("td");
+            filtered.push({
+                id: c[0].innerText,
+                type: c[1].innerText,
+                points: c[2].innerText,
+                bottles: c[3].innerText,
+                machine_id: c[4].innerText,
+                created_at: c[5].innerText
+            });
+        }
+    });
+
+    fetch(`/admin/users/${userId}/report`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ data: filtered })
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = userId + "_filtered_report.pdf";
+        a.click();
+    });
+}
 </script>
 
 {% endblock %}
+
