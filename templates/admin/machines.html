@@ -63,7 +63,16 @@
 <div class="row">
   {% for machine in machines %}
   <div class="col-md-6">
-    <div class="card mb-3 shadow machine-card">
+      <div class="card mb-3 shadow machine-card"
+     data-lat="{{ machine.lat }}"
+     data-lng="{{ machine.lng }}"
+     data-current="{{ machine.current_bottles }}"
+     data-max="{{ machine.max_capacity }}"
+     data-total="{{ machine.total_bottles }}"
+     data-full="{{ machine.is_full }}"
+     data-last="{{ machine.last_emptied }}"
+     data-created="{{ machine.created_at }}">
+
       <div class="card-body">
 
         <div class="inner-card">
@@ -137,17 +146,17 @@ function downloadMachinesPDF() {
         if (card.style.display !== "none") {
 
             filtered.push({
-                machine_id: card.querySelector(".m-data-id").innerText,
-                name: card.querySelector(".m-data-name").innerText,
-                city: card.querySelector(".m-data-city").innerText,
-                status: card.querySelector(".m-data-status").innerText,
-                current_bottles: card.querySelector(".m-data-current").innerText,
-                max_capacity: card.querySelector(".m-data-max").innerText,
-                total_bottles: card.querySelector(".m-data-total").innerText,
-                lat: card.querySelector(".m-data-lat").innerText,
-                lng: card.querySelector(".m-data-lng").innerText,
-                created_at: card.querySelector(".m-data-created").innerText,
-                last_emptied: card.querySelector(".m-data-emptied").innerText
+                machine_id: card.querySelector(".machine-id").innerText.trim(),
+                name: card.querySelector(".machine-name").innerText.trim(),
+                city: card.querySelector(".machine-city").innerText.trim(),
+                lat: card.dataset.lat,
+                lng: card.dataset.lng,
+                current_bottles: card.dataset.current,
+                max_capacity: card.dataset.max,
+                total_bottles: card.dataset.total,
+                is_full: card.dataset.full,
+                last_emptied: card.dataset.last,
+                created_at: card.dataset.created
             });
         }
     });
@@ -166,6 +175,23 @@ function downloadMachinesPDF() {
         a.click();
     });
 }
+
+
+    fetch("/admin/machines/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: filtered })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "filtered_machines.pdf";
+        a.click();
+    });
+}
 </script>
 
 {% endblock %}
+
