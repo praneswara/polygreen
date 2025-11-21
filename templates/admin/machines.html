@@ -56,19 +56,27 @@
  }
 </style>
 <h2 class="mb-4 text-center">기계</h2>
+<input 
+    type="text"
+    id="machineSearch"
+    class="form-control mb-3"
+    placeholder="🔍 기계 ID, 이름, 도시 검색..."
+    onkeyup="filterMachines()">
 
 <div class="row">
   {% for machine in machines %}
   <div class="col-md-6 ">
-    <div class="card mb-3 shadow">
+    <div class="card mb-3 shadow machine-card">
       <div class="card-body">
           <div class="inner-card">     
-             <h5 class="card-title">{{ machine.name }} ({{ machine.machine_id }})</h5>
-                   <p class="btn {% if machine.is_full %}full{% else %}available{% endif %}"><strong> {% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong></p>
+             <h5 class="card-title machine-name">{{ machine.name }} (<span class="machine-id">{{ machine.machine_id }}</span>)</h5>
+                   <p class="btn {% if machine.is_full %}full{% else %}available{% endif %} machine-status">
+    <strong>{% if machine.is_full %}가득한{% else %}사용 가능{% endif %}</strong>
+</p>
            </div>
 
                      <p><img src="{{ url_for('static', filename='building.png')}}" 
-                alt="clean" width="30" height="30" class="m-1"><strong>{{ machine.city }}</strong></p>
+                alt="clean" width="30" height="30" class="m-1"><strong class="machine-city">{{ machine.city }}</strong></p>
                        <p> <a href="{{ url_for('admin_machine_detail', machine_id=machine.machine_id) }}" class="btn detail">세부</a></p>
 
       
@@ -83,8 +91,57 @@
 </div>
 <a href="{{ url_for('admin_add_machine') }}" class="btn mt-3 mb-3 addnew"><img src="{{ url_for('static', filename='plus..png')}}" 
              alt="plus" width="25" height="25" >   새 기계 추가</a>
-<a href="/admin/machines/report" class="btn btn-primary">Download Machines PDF</a>
+<button class="btn btn-primary" onclick="downloadMachinesPDF()">📄 Download Machines PDF</button>
+
+<script>
+function filterMachines() {
+    let input = document.getElementById("machineSearch").value.toLowerCase();
+    let cards = document.querySelectorAll(".machine-card");
+
+    cards.forEach(card => {
+        let text = card.innerText.toLowerCase();
+        card.style.display = text.includes(input) ? "" : "none";
+    });
+}
+  function downloadMachinesPDF() {
+
+    const cards = document.querySelectorAll(".machine-card");
+    let filtered = [];
+
+    cards.forEach(card => {
+        if (card.style.display !== "none") {
+
+            let machine_id = card.querySelector(".machine-id").innerText.trim();
+            let name = card.querySelector(".machine-name").innerText.trim();
+            let city = card.querySelector(".machine-city").innerText.trim();
+            let status = card.querySelector(".machine-status").innerText.trim();
+
+            filtered.push({
+                machine_id,
+                name,
+                city,
+                status
+            });
+        }
+    });
+
+    fetch("/admin/machines/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: filtered })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "filtered_machines.pdf";
+        a.click();
+    });
+}
+</script>
 
 {% endblock %}
+
 
 
