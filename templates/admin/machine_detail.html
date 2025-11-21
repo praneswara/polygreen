@@ -8,6 +8,19 @@
 <!-- Machine Basic Info -->
 <div class="card mb-3 mt-3 shadow">
   <div class="card-body">
+    <!-- 🔥 PDF Hidden Metadata -->
+<span id="m-id" style="display:none">{{ machine.machine_id }}</span>
+<span id="m-name" style="display:none">{{ machine.name }}</span>
+<span id="m-city" style="display:none">{{ machine.city }}</span>
+<span id="m-lat" style="display:none">{{ machine.lat }}</span>
+<span id="m-lng" style="display:none">{{ machine.lng }}</span>
+<span id="m-current" style="display:none">{{ machine.current_bottles }}</span>
+<span id="m-max" style="display:none">{{ machine.max_capacity }}</span>
+<span id="m-total" style="display:none">{{ machine.total_bottles }}</span>
+<span id="m-full" style="display:none">{{ machine.is_full }}</span>
+<span id="m-created" style="display:none">{{ machine.created_at }}</span>
+<span id="m-emptied" style="display:none">{{ machine.last_emptied }}</span>
+
     <div class="header-status">
       <h2 class="text">
         <img src="{{ url_for('static', filename='recycle.png')}}" width="35" height="35">
@@ -125,9 +138,10 @@
   </tbody>
 </table>
 
-<a href="/admin/machines/{{ machine.machine_id }}/report" class="btn btn-primary">
-  Download Machine PDF
-</a>
+<button class="btn btn-primary mt-3" onclick="downloadMachineDetailPDF()">
+📄 Download Filtered Machine PDF
+</button>
+
 
 </div>
 
@@ -208,7 +222,56 @@ function filterTransactions() {
         row.style.display = show ? "" : "none";
     }
 }
+function downloadMachineDetailPDF() {
+
+    let rows = document.querySelectorAll("#transactionsTable tbody tr");
+    let filtered = [];
+
+    rows.forEach(row => {
+        if (row.style.display !== "none") {
+            let c = row.querySelectorAll("td");
+            filtered.push({
+                id: c[0].innerText,
+                user_id: c[1].innerText,
+                type: c[2].innerText,
+                points: c[3].innerText,
+                bottles: c[4].innerText,
+                machine_id: c[5].innerText,
+                created_at: c[6].innerText
+            });
+        }
+    });
+
+    const machine = {
+        machine_id: document.getElementById("m-id").innerText,
+        name: document.getElementById("m-name").innerText,
+        city: document.getElementById("m-city").innerText,
+        lat: document.getElementById("m-lat").innerText,
+        lng: document.getElementById("m-lng").innerText,
+        current: document.getElementById("m-current").innerText,
+        max: document.getElementById("m-max").innerText,
+        total: document.getElementById("m-total").innerText,
+        full: document.getElementById("m-full").innerText,
+        created_at: document.getElementById("m-created").innerText,
+        last_emptied: document.getElementById("m-emptied").innerText
+    };
+
+    fetch(`/admin/machines/${machine.machine_id}/report-filtered`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ machine, transactions: filtered })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        let url = window.URL.createObjectURL(blob);
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = `${machine.machine_id}_filtered_report.pdf`;
+        a.click();
+    });
+}
 
 </script>
 
 {% endblock %}
+
