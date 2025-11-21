@@ -416,75 +416,77 @@ def export_individual_user_report(user_id):
 
 @admin_app.route("/admin/machines/report", methods=["POST"])
 @admin_required
-def export_filtered_machines():
+def admin_machines_pdf():
 
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    import io
-
+    # Korean font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     payload = request.get_json()
     if not payload or "data" not in payload:
-        return jsonify({"error": "No data provided"}), 400
+        return jsonify({"error": "No data"}), 400
 
     data = payload["data"]
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=20,
+        rightMargin=20,
+        topMargin=20,
+        bottomMargin=20
+    )
 
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "HYSMyeongJo-Medium"
     styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
     elements = []
-    elements.append(Paragraph("기계 보고서 (필터 적용됨)", styles["Heading1"]))
-    elements.append(Spacer(1, 12))
+    elements.append(Paragraph("기계 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 10))
 
-    table_data = [[
-        "기계 ID", "이름", "도시", "상태",
-        "현재병수", "최대용량", "총수집",
-        "위도", "경도", "마지막 비움"
-    ]]
+    # ---------- TABLE HEADER ----------
+    table_data = [
+        ["기계 ID", "이름", "도시", "상태"]
+    ]
 
+    # ---------- TABLE ROWS ----------
     for m in data:
         table_data.append([
             m.get("machine_id", ""),
             m.get("name", ""),
             m.get("city", ""),
-            m.get("status", ""),
-            m.get("current", ""),
-            m.get("max", ""),
-            m.get("total", ""),
-            m.get("lat", ""),
-            m.get("lng", ""),
-            m.get("last_emptied", "")
+            m.get("status", "")
         ])
 
-    table = Table(table_data, repeatRows=1)
+    # ---------- FIX COLUMN WIDTHS ----------
+    table = Table(
+        table_data,
+        colWidths=[80, 140, 80, 60]  # Perfect fit for A4
+    )
+
+    # ---------- STYLE ----------
     table.setStyle(TableStyle([
-        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("ALIGN", (0,0), (-1,-1), "CENTER"),
-        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
+        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID", (0, 0), (-1, -1), 0.6, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
     ]))
 
     elements.append(table)
     doc.build(elements)
 
     buffer.seek(0)
-
     return send_file(
         buffer,
-        mimetype="application/pdf",
         as_attachment=True,
-        download_name="filtered_machines.pdf"
+        mimetype="application/pdf",
+        download_name="machines_report.pdf"
     )
+
 
 
 
@@ -693,6 +695,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
