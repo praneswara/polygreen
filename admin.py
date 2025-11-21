@@ -414,7 +414,94 @@ def export_individual_user_report(user_id):
         download_name=f"{user_id}_filtered_report.pdf"
     )
 
-    
+@admin_app.route("/admin/machines/report")
+@admin_required
+def admin_machines_pdf():
+
+    # Register Korean Font
+    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, machine_id, name, city, lat, lng, current_bottles, max_capacity,
+               total_bottles, is_full, last_emptied, created_at
+        FROM machines
+        ORDER BY id;
+    """)
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
+
+    elements = []
+    elements.append(Paragraph("기계 전체 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    # Table header
+    table_data = [[
+        "ID",
+        "Machine ID",
+        "Name",
+        "City",
+        "Lat",
+        "Lng",
+        "Current",
+        "Max",
+        "Total Bottles",
+        "Full?",
+        "Last Emptied",
+        "Created At"
+    ]]
+
+    # Add rows
+    for m in rows:
+        table_data.append([
+            m["id"],
+            m["machine_id"],
+            m["name"],
+            m["city"],
+            m["lat"],
+            m["lng"],
+            m["current_bottles"],
+            m["max_capacity"],
+            m["total_bottles"],
+            "Yes" if m["is_full"] else "No",
+            str(m["last_emptied"]),
+            str(m["created_at"])
+        ])
+
+    # Build table
+    table = Table(table_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="machines_report_full.pdf",
+        mimetype="application/pdf"
+    )
+
+
 @admin_app.route("/admin/machines/<string:machine_id>/report")
 @admin_required
 def admin_machine_detail_pdf(machine_id):
@@ -453,70 +540,6 @@ def admin_machine_detail_pdf(machine_id):
     return send_file(pdf, as_attachment=True,
                      download_name=f"{machine_id}_report.pdf",
                      mimetype="application/pdf")
-
-@admin_app.route("/admin/machines/report", methods=["POST"])
-@admin_required
-def admin_machines_pdf():
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet
-    import io
-    from flask import request, send_file, jsonify
-
-    pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
-
-    payload = request.get_json()
-    if not payload or "data" not in payload:
-        return jsonify({"error": "No data"}), 400
-
-    data = payload["data"]
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-
-    styles = getSampleStyleSheet()
-    styles["Normal"].fontName = "HYSMyeongJo-Medium"
-    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
-
-    elements = []
-    elements.append(Paragraph("기계 보고서", styles["Heading1"]))
-    elements.append(Spacer(1, 12))
-
-    table_data = [["기계 ID", "이름", "도시", "상태"]]
-
-    for m in data:
-        table_data.append([
-            m.get("machine_id", ""),
-            m.get("name", ""),
-            m.get("city", ""),
-            m.get("status", "")
-        ])
-
-    table = Table(table_data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("ALIGN", (0,0), (-1,-1), "CENTER"),
-        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
-    ]))
-
-    elements.append(table)
-    doc.build(elements)
-
-    buffer.seek(0)
-
-    return send_file(
-        buffer,
-        mimetype="application/pdf",
-        as_attachment=True,
-        download_name="filtered_machines.pdf"
-    )
-
-
 
 # ---------------- Empty Machine ----------------
 @admin_app.route("/admin/machine/<string:machine_id>/empty", methods=["POST"])
@@ -682,6 +705,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
