@@ -467,7 +467,7 @@ def export_filtered_machines():
         ])
 
     # ------------------ AUTO-COLUMN WIDTH ------------------
-    col_widths = [60, 70, 60, 45, 45, 45, 40, 120]
+    col_widths = [60, 70, 60, 45, 45, 45, 40, 135]
 
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
 
@@ -743,6 +743,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
