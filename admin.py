@@ -414,34 +414,45 @@ def export_individual_user_report(user_id):
         download_name=f"{user_id}_filtered_report.pdf"
     )
 
-@admin_app.route("/admin/machines/report", methods=["GET"])
+@admin_app.route("/admin/machines/report")
 @admin_required
 def admin_machines_pdf():
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib import colors
-    import io
-
-    # Korean Font
+    # Register Korean-safe font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT machine_id, name, city, lat, lng, current_bottles, max_capacity,
-               total_bottles, is_full, last_emptied, created_at
-        FROM machines ORDER BY id;
+        SELECT machine_id, name, city, lat, lng,
+               current_bottles, max_capacity, total_bottles,
+               is_full, last_emptied, created_at
+        FROM machines
+        ORDER BY id;
     """)
-    machines = cur.fetchall()
+    rows = cur.fetchall()
 
     cur.close()
     conn.close()
 
-    # PDF buffer
+    # Convert rows safely
+    machines = []
+    for m in rows:
+        machines.append([
+            m["machine_id"] or "",
+            m["name"] or "",
+            m["city"] or "",
+            str(m["lat"] or ""),
+            str(m["lng"] or ""),
+            str(m["current_bottles"] or "0"),
+            str(m["max_capacity"] or "0"),
+            str(m["total_bottles"] or "0"),
+            "Full" if m["is_full"] else "Available",
+            m["last_emptied"].strftime("%Y-%m-%d %H:%M") if m["last_emptied"] else "",
+            m["created_at"].strftime("%Y-%m-%d %H:%M") if m["created_at"] else ""
+        ])
+
+    # Build PDF
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -450,56 +461,43 @@ def admin_machines_pdf():
     styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
     elements = []
-    elements.append(Paragraph("기계 전체 보고서", styles["Heading1"]))
-    elements.append(Spacer(1, 14))
+    elements.append(Paragraph("전체 기계 보고서", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
 
-    # TABLE HEADER
-    table_data = [[
-        "Machine ID", "Name", "City",
-        "Lat", "Lng",
-        "Current", "Max",
-        "Total Bottles",
-        "Status",
-        "Last Emptied",
-        "Created"
-    ]]
+    # Table Header
+    table_data = [
+        [
+            "ID", "이름", "도시", "위도", "경도",
+            "현재 병", "최대 용량", "총 병",
+            "상태", "마지막 비움", "생성 날짜"
+        ]
+    ]
 
-    # ROWS
-    for m in machines:
-        table_data.append([
-            m["machine_id"],
-            m["name"],
-            m["city"],
-            m["lat"],
-            m["lng"],
-            m["current_bottles"],
-            m["max_capacity"],
-            m["total_bottles"],
-            "Full" if m["is_full"] else "Available",
-            str(m["last_emptied"]),
-            str(m["created_at"])
-        ])
+    table_data.extend(machines)
 
     table = Table(table_data, repeatRows=1)
+
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.lightgrey])
     ]))
 
     elements.append(table)
     doc.build(elements)
 
     buffer.seek(0)
+
     return send_file(
         buffer,
+        mimetype="application/pdf",
         as_attachment=True,
-        download_name="machines_report_full.pdf",
-        mimetype="application/pdf"
+        download_name="machines_report.pdf"
     )
+
 
 
 
@@ -706,6 +704,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
