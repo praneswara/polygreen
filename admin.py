@@ -416,34 +416,85 @@ def export_individual_user_report(user_id):
 
 @admin_app.route("/admin/machines/report", methods=["POST"])
 @admin_required
-def admin_machines_pdf():
+def export_filtered_machines():
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+    import io
 
-    # Korean font
+    # Register Korean font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     payload = request.get_json()
     if not payload or "data" not in payload:
-        return jsonify({"error": "No data"}), 400
+        return jsonify({"error": "No data provided"}), 400
 
     data = payload["data"]
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=20,
-        rightMargin=20,
-        topMargin=20,
-        bottomMargin=20
-    )
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=20, rightMargin=20)
 
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "HYSMyeongJo-Medium"
     styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
     elements = []
-    elements.append(Paragraph("기계 보고서", styles["Heading1"]))
-    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("기계 보고서 (필터링됨)", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    # ------------------ TABLE HEADER ------------------
+    header = [
+        "Machine ID", "Name", "City", "Lat", "Lng", 
+        "Current", "Max", "Total", "Full?", "Last Emptied", "Created"
+    ]
+
+    table_data = [header]
+
+    # ------------------ APPEND MACHINE ROWS ------------------
+    for m in data:
+        table_data.append([
+            m.get("machine_id", ""),
+            m.get("name", ""),
+            m.get("city", ""),
+            m.get("lat", ""),
+            m.get("lng", ""),
+            m.get("current_bottles", ""),
+            m.get("max_capacity", ""),
+            m.get("total_bottles", ""),
+            m.get("is_full", ""),
+            m.get("last_emptied", ""),
+            m.get("created_at", ""),
+        ])
+
+    # ------------------ AUTO-COLUMN WIDTH ------------------
+    col_widths = [60, 70, 60, 40, 40, 45, 45, 45, 40, 80, 80]
+
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+    ]))
+
+    elements.append(table)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        download_name="filtered_machines_report.pdf",
+        as_attachment=True,
+        mimetype="application/pdf"
+    )
+
 
     # ---------- TABLE HEADER ----------
     table_data = [
@@ -695,6 +746,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
