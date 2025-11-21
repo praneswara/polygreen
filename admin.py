@@ -414,45 +414,26 @@ def export_individual_user_report(user_id):
         download_name=f"{user_id}_filtered_report.pdf"
     )
 
-@admin_app.route("/admin/machines/report")
+@admin_app.route("/admin/machines/report", methods=["POST"])
 @admin_required
-def admin_machines_pdf():
-    # Register Korean-safe font
+def export_filtered_machines():
+
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    import io
+
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
-    conn = get_db_connection()
-    cur = conn.cursor()
+    payload = request.get_json()
+    if not payload or "data" not in payload:
+        return jsonify({"error": "No data provided"}), 400
 
-    cur.execute("""
-        SELECT machine_id, name, city, lat, lng,
-               current_bottles, max_capacity, total_bottles,
-               is_full, last_emptied, created_at
-        FROM machines
-        ORDER BY id;
-    """)
-    rows = cur.fetchall()
+    data = payload["data"]
 
-    cur.close()
-    conn.close()
-
-    # Convert rows safely
-    machines = []
-    for m in rows:
-        machines.append([
-            m["machine_id"] or "",
-            m["name"] or "",
-            m["city"] or "",
-            str(m["lat"] or ""),
-            str(m["lng"] or ""),
-            str(m["current_bottles"] or "0"),
-            str(m["max_capacity"] or "0"),
-            str(m["total_bottles"] or "0"),
-            "Full" if m["is_full"] else "Available",
-            m["last_emptied"].strftime("%Y-%m-%d %H:%M") if m["last_emptied"] else "",
-            m["created_at"].strftime("%Y-%m-%d %H:%M") if m["created_at"] else ""
-        ])
-
-    # Build PDF
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -461,29 +442,36 @@ def admin_machines_pdf():
     styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
     elements = []
-    elements.append(Paragraph("전체 기계 보고서", styles["Heading1"]))
+    elements.append(Paragraph("기계 보고서 (필터 적용됨)", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # Table Header
-    table_data = [
-        [
-            "ID", "이름", "도시", "위도", "경도",
-            "현재 병", "최대 용량", "총 병",
-            "상태", "마지막 비움", "생성 날짜"
-        ]
-    ]
+    table_data = [[
+        "기계 ID", "이름", "도시", "상태",
+        "현재병수", "최대용량", "총수집",
+        "위도", "경도", "마지막 비움"
+    ]]
 
-    table_data.extend(machines)
+    for m in data:
+        table_data.append([
+            m.get("machine_id", ""),
+            m.get("name", ""),
+            m.get("city", ""),
+            m.get("status", ""),
+            m.get("current", ""),
+            m.get("max", ""),
+            m.get("total", ""),
+            m.get("lat", ""),
+            m.get("lng", ""),
+            m.get("last_emptied", "")
+        ])
 
     table = Table(table_data, repeatRows=1)
-
     table.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.lightgrey])
+        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
     ]))
 
     elements.append(table)
@@ -495,8 +483,9 @@ def admin_machines_pdf():
         buffer,
         mimetype="application/pdf",
         as_attachment=True,
-        download_name="machines_report.pdf"
+        download_name="filtered_machines.pdf"
     )
+
 
 
 
@@ -704,6 +693,7 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
 
 
