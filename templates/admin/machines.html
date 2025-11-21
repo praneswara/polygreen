@@ -146,9 +146,9 @@ function downloadMachinesPDF() {
         if (card.style.display !== "none") {
 
             filtered.push({
-                machine_id: card.querySelector(".machine-id").innerText.trim(),
-                name: card.querySelector(".machine-name").innerText.trim(),
-                city: card.querySelector(".machine-city").innerText.trim(),
+                machine_id: card.querySelector(".m-data-id").innerText.trim(),
+                name: card.querySelector(".m-data-name").innerText.trim(),
+                city: card.querySelector(".m-data-city").innerText.trim(),
                 lat: card.dataset.lat,
                 lng: card.dataset.lng,
                 current_bottles: card.dataset.current,
@@ -175,23 +175,9 @@ function downloadMachinesPDF() {
         a.click();
     });
 }
-
-
-    fetch("/admin/machines/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: filtered })
-    })
-    .then(res => res.blob())
-    .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "filtered_machines.pdf";
-        a.click();
-    });
-}
 </script>
 
+
 {% endblock %}
+
 
