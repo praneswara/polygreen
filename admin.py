@@ -1,26 +1,35 @@
 import os
 import io
 import datetime as dt
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session, abort, send_file
+
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, flash, session, abort, send_file, jsonify
+)
+
 from functools import wraps
 from dotenv import load_dotenv
 from io import BytesIO
+
+# ---------------- ReportLab ----------------
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.pagesizes import A4
+from reportlab.platypus import (
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+)
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 
-
+# Register Korean fonts ONCE
 pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 pdfmetrics.registerFont(UnicodeCIDFont("HYGothic-Medium"))
 
-
+# Load environment variables
 load_dotenv()
 
 admin_app = Flask(__name__, template_folder="templates")
@@ -32,16 +41,14 @@ def get_db_connection():
     if not dsn:
         raise ValueError("DATABASE_URL not set in .env")
 
-    # psycopg2 requires "postgresql://" not "postgres://"
     if dsn.startswith("postgres://"):
         dsn = dsn.replace("postgres://", "postgresql://", 1)
 
-    # connect using the URL
     conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
     return conn
 
+
 def serialize_row(row):
-    """Convert datetime/date fields in a RealDict row to ISO strings for templates/JSON."""
     if not row:
         return row
     for k, v in list(row.items()):
@@ -49,11 +56,11 @@ def serialize_row(row):
             row[k] = v.isoformat()
     return row
 
+
 def generate_pdf(title, lines):
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
 
-    # Use Korean-safe font
     p.setFont("HYGothic-Medium", 16)
     y = 750
     p.drawString(50, y, title)
@@ -84,22 +91,25 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
 @admin_app.route('/')
 def home():
     return render_template("admin/index.html")
-    
+
+
 # ---------------- Login ----------------
 @admin_app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-        # simple fixed credential check (keep as-is)
+
         if username == "polygreen" and password == "poly123":
             session["admin_logged_in"] = True
             return redirect(url_for("admin_dashboard"))
         else:
             flash("Invalid credentials", "error")
+
     return render_template("admin/login.html")
 
 
@@ -123,7 +133,6 @@ def admin_dashboard():
         total_transactions = cur.fetchone()["total_transactions"]
 
     except Exception as e:
-        # Debugging help: flash or log the DB error
         flash(f"Database error: {e}", "danger")
         total_users = total_machines = total_transactions = 0
 
@@ -139,7 +148,6 @@ def admin_dashboard():
         "total_transactions": total_transactions,
     }
     return render_template("admin/dashboard.html", stats=stats)
-
 
 
 # ---------------- Users ----------------
@@ -169,6 +177,7 @@ def admin_user_detail(user_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+
         cur.execute("""
             SELECT user_id, name, mobile, points, bottles, created_at
             FROM users WHERE user_id = %s;
@@ -184,8 +193,10 @@ def admin_user_detail(user_id):
             ORDER BY created_at DESC;
         """, (user_id,))
         transactions = cur.fetchall()
-        transactions = [serialize_row(t) for t in transactions]
+
         user = serialize_row(user)
+        transactions = [serialize_row(t) for t in transactions]
+
     finally:
         cur.close()
         conn.close()
@@ -201,7 +212,8 @@ def admin_machines():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, machine_id, name, city, lat, lng, current_bottles, max_capacity, total_bottles, is_full, last_emptied, created_at
+            SELECT id, machine_id, name, city, lat, lng, current_bottles, max_capacity,
+                   total_bottles, is_full, last_emptied, created_at
             FROM machines
             ORDER BY id;
         """)
@@ -222,7 +234,8 @@ def admin_machine_detail(machine_id):
         cur = conn.cursor()
 
         cur.execute("""
-            SELECT id, machine_id, name, city, lat, lng, current_bottles, max_capacity, total_bottles, is_full, last_emptied, created_at
+            SELECT id, machine_id, name, city, lat, lng, current_bottles,
+                   max_capacity, total_bottles, is_full, last_emptied, created_at
             FROM machines WHERE machine_id = %s;
         """, (machine_id,))
         machine = cur.fetchone()
@@ -236,8 +249,10 @@ def admin_machine_detail(machine_id):
             ORDER BY created_at DESC;
         """, (machine["machine_id"],))
         transactions = cur.fetchall()
-        transactions = [serialize_row(t) for t in transactions]
+
         machine = serialize_row(machine)
+        transactions = [serialize_row(t) for t in transactions]
+
     finally:
         cur.close()
         conn.close()
@@ -247,7 +262,7 @@ def admin_machine_detail(machine_id):
         max_cap = machine.get("max_capacity") or 0
         current = machine.get("current_bottles") or 0
         fill_percentage = (current / max_cap) * 100 if max_cap else 0
-    except Exception:
+    except:
         fill_percentage = 0
 
     return render_template(
@@ -257,20 +272,12 @@ def admin_machine_detail(machine_id):
         fill_percentage=fill_percentage
     )
 
+
+# ---------------- Export: Filtered Users ----------------
 @admin_app.route("/admin/users/report", methods=["POST"])
 @admin_required
 def export_filtered_users():
 
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet
-    import io
-    from flask import request, send_file, jsonify
-
-    # Korean font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     payload = request.get_json()
@@ -290,10 +297,8 @@ def export_filtered_users():
     elements.append(Paragraph("사용자 보고서", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # Table header
     table_data = [["ID", "이름", "전화번호", "포인트", "병"]]
 
-    # Insert user rows
     for u in data:
         table_data.append([
             u.get("user_id", ""),
@@ -304,13 +309,12 @@ def export_filtered_users():
         ])
 
     table = Table(table_data, repeatRows=1)
-
     table.setStyle(TableStyle([
-        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("ALIGN", (0,0), (-1,-1), "CENTER"),
-        ("GRID", (0,0), (-1,-1), 0.7, colors.black)
+        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.7, colors.black)
     ]))
 
     elements.append(table)
@@ -325,23 +329,14 @@ def export_filtered_users():
         download_name="filtered_users.pdf"
     )
 
+
+# ---------------- Export Individual User Report ----------------
 @admin_app.route("/admin/users/<string:user_id>/report", methods=["POST"])
 @admin_required
 def export_individual_user_report(user_id):
 
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet
-    import io
-    from flask import request, send_file, abort
-
-    # Korean font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
-    # Fetch user details
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE user_id=%s;", (user_id,))
@@ -361,11 +356,9 @@ def export_individual_user_report(user_id):
 
     elements = []
 
-    # Title
     elements.append(Paragraph("사용자 거래 보고서", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # User details section
     user_info = f"""
     사용자 ID: {user['user_id']}<br/>
     이름: {user['name']}<br/>
@@ -378,10 +371,8 @@ def export_individual_user_report(user_id):
     elements.append(Paragraph(user_info, styles["Normal"]))
     elements.append(Spacer(1, 15))
 
-    # Table header
     table_data = [["ID", "유형", "전철기", "병", "머신 ID", "날짜"]]
 
-    # Add transactions
     for t in data:
         table_data.append([
             t.get("id", ""),
@@ -393,13 +384,12 @@ def export_individual_user_report(user_id):
         ])
 
     table = Table(table_data, repeatRows=1)
-
     table.setStyle(TableStyle([
-        ("FONTNAME", (0,0), (-1,-1), "HYSMyeongJo-Medium"),
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#006d71")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("ALIGN", (0,0), (-1,-1), "CENTER"),
-        ("GRID", (0,0), (-1,-1), 0.7, colors.black),
+        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.7, colors.black)
     ]))
 
     elements.append(table)
@@ -414,18 +404,12 @@ def export_individual_user_report(user_id):
         download_name=f"{user_id}_filtered_report.pdf"
     )
 
+
+# ---------------- Export Filtered Machines ----------------
 @admin_app.route("/admin/machines/report", methods=["POST"])
 @admin_required
 def export_filtered_machines():
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib import colors
-    import io
 
-    # Register Korean font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     payload = request.get_json()
@@ -439,21 +423,19 @@ def export_filtered_machines():
 
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "HYSMyeongJo-Medium"
-    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].fontName = "HYSMyeongJo-M-medium"
 
     elements = []
     elements.append(Paragraph("기계 보고서 (필터링됨)", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # ------------------ TABLE HEADER ------------------
     header = [
-        "Machine ID", "Name", "City",
-        "Current", "Max", "Total", "Full?", "Last Emptied"
+        "Machine ID", "Name", "City", "Current",
+        "Max", "Total", "Full?", "Last Emptied"
     ]
 
     table_data = [header]
 
-    # ------------------ APPEND MACHINE ROWS ------------------
     for m in data:
         table_data.append([
             m.get("machine_id", ""),
@@ -466,11 +448,9 @@ def export_filtered_machines():
             m.get("last_emptied", ""),
         ])
 
-    # ------------------ AUTO-COLUMN WIDTH ------------------
     col_widths = [60, 70, 60, 45, 45, 45, 40, 135]
 
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
-
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
@@ -481,8 +461,8 @@ def export_filtered_machines():
     ]))
 
     elements.append(table)
-
     doc.build(elements)
+
     buffer.seek(0)
 
     return send_file(
@@ -493,53 +473,7 @@ def export_filtered_machines():
     )
 
 
-    # ---------- TABLE HEADER ----------
-    table_data = [
-        ["기계 ID", "이름", "도시", "상태"]
-    ]
-
-    # ---------- TABLE ROWS ----------
-    for m in data:
-        table_data.append([
-            m.get("machine_id", ""),
-            m.get("name", ""),
-            m.get("city", ""),
-            m.get("status", "")
-        ])
-
-    # ---------- FIX COLUMN WIDTHS ----------
-    table = Table(
-        table_data,
-        colWidths=[80, 140, 80, 60]  # Perfect fit for A4
-    )
-
-    # ---------- STYLE ----------
-    table.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("GRID", (0, 0), (-1, -1), 0.6, colors.black),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-    ]))
-
-    elements.append(table)
-    doc.build(elements)
-
-    buffer.seek(0)
-    return send_file(
-        buffer,
-        as_attachment=True,
-        mimetype="application/pdf",
-        download_name="machines_report.pdf"
-    )
-
-
-
-
-
-
+# ---------------- Export Filtered Machine Detail Report ----------------
 @admin_app.route("/admin/machines/<string:machine_id>/report-filtered", methods=["POST"])
 @admin_required
 def admin_machine_filtered_pdf(machine_id):
@@ -548,22 +482,20 @@ def admin_machine_filtered_pdf(machine_id):
     machine = payload.get("machine", {})
     transactions = payload.get("transactions", [])
 
-    # Korean font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
+
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "HYSMyeongJo-Medium"
     styles["Heading1"].fontName = "HYSMyeongJo-Medium"
 
     elements = []
 
-    # Title
     elements.append(Paragraph("기계 상세 보고서 (Machine Detail Report)", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # Machine Info Table
     info_data = [
         ["Machine ID", machine.get("machine_id")],
         ["Name", machine.get("name")],
@@ -590,12 +522,12 @@ def admin_machine_filtered_pdf(machine_id):
     elements.append(info_table)
     elements.append(Spacer(1, 20))
 
-    # Transactions Table
     table_data = [["ID", "User ID", "Type", "Points", "Bottles", "Date"]]
+
     for t in transactions:
         table_data.append([
-            t["id"], t["user_id"], t["type"], t["points"],
-            t["bottles"], t["created_at"]
+            t["id"], t["user_id"], t["type"],
+            t["points"], t["bottles"], t["created_at"]
         ])
 
     trx_table = Table(table_data, repeatRows=1)
@@ -619,6 +551,7 @@ def admin_machine_filtered_pdf(machine_id):
         mimetype="application/pdf"
     )
 
+
 # ---------------- Empty Machine ----------------
 @admin_app.route("/admin/machine/<string:machine_id>/empty", methods=["POST"])
 @admin_required
@@ -626,7 +559,7 @@ def admin_empty_machine(machine_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Get machine first
+
         cur.execute("SELECT id, machine_id, name, current_bottles FROM machines WHERE machine_id = %s;", (machine_id,))
         machine = cur.fetchone()
         if not machine:
@@ -642,6 +575,7 @@ def admin_empty_machine(machine_id):
             WHERE machine_id = %s;
         """, (machine_id,))
         conn.commit()
+
     finally:
         cur.close()
         conn.close()
@@ -650,7 +584,7 @@ def admin_empty_machine(machine_id):
     return redirect(url_for("admin_machine_detail", machine_id=machine_id))
 
 
-# ---------------- ADD Machine ----------------
+# ---------------- Add Machine ----------------
 @admin_app.route("/admin/machines/add", methods=["GET", "POST"])
 @admin_required
 def admin_add_machine():
@@ -665,17 +599,19 @@ def admin_add_machine():
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            # check uniqueness
+
             cur.execute("SELECT 1 FROM machines WHERE machine_id = %s;", (machine_id,))
             if cur.fetchone():
                 flash(f"Machine ID '{machine_id}' already exists.", "danger")
                 return redirect(url_for("admin_add_machine"))
 
             cur.execute("""
-                INSERT INTO machines (machine_id, name, city, lat, lng, max_capacity, current_bottles, total_bottles, is_full, created_at)
+                INSERT INTO machines (machine_id, name, city, lat, lng, max_capacity,
+                                      current_bottles, total_bottles, is_full, created_at)
                 VALUES (%s,%s,%s,%s,%s,%s,0,0,FALSE,NOW());
             """, (machine_id, name, city, lat, lng, max_capacity))
             conn.commit()
+
         finally:
             cur.close()
             conn.close()
@@ -684,7 +620,9 @@ def admin_add_machine():
         return redirect(url_for("admin_machines"))
 
     return render_template("admin/add_machine.html")
-    
+
+
+# ---------------- Transactions ----------------
 @admin_app.route("/admin/transactions")
 @admin_required
 def admin_transactions():
@@ -698,6 +636,7 @@ def admin_transactions():
         """)
         transactions = cur.fetchall()
         transactions = [serialize_row(t) for t in transactions]
+
     finally:
         cur.close()
         conn.close()
@@ -709,7 +648,6 @@ def admin_transactions():
 @admin_required
 def export_filtered_transactions():
 
-    # Register Korean Font
     pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
 
     payload = request.get_json()
@@ -729,10 +667,8 @@ def export_filtered_transactions():
     elements.append(Paragraph("필터링된 거래 보고서", styles["Heading1"]))
     elements.append(Spacer(1, 12))
 
-    # Table header
     table_data = [["ID", "사용자 ID", "유형", "전철기", "병", "머신 ID", "날짜"]]
 
-    # Table rows
     for t in data:
         table_data.append([
             t.get("id", ""),
@@ -741,11 +677,10 @@ def export_filtered_transactions():
             t.get("points", ""),
             t.get("bottles", ""),
             t.get("machine_id", ""),
-            t.get("created_at", ""),
+            t.get("created_at", "")
         ])
 
     table = Table(table_data, repeatRows=1)
-
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "HYSMyeongJo-Medium"),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#006d71")),
@@ -766,6 +701,7 @@ def export_filtered_transactions():
         download_name="filtered_transactions.pdf"
     )
 
+
 # ---------------- Logout ----------------
 @admin_app.route("/admin/logout")
 def admin_logout():
@@ -774,7 +710,6 @@ def admin_logout():
 
 
 if __name__ == "__main__":
-    # Quick DB connection check
     try:
         c = get_db_connection()
         c.close()
@@ -783,28 +718,3 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
