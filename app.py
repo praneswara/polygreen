@@ -451,35 +451,101 @@ def list_machines():
     return jsonify(items=out)
 
 
-@app.route("/api/auth/forgot-password", methods=["POST"])
-def forgot_password():
+@app.route("/api/auth/forgot-password/start", methods=["POST"])
+def forgot_password_start():
+    data = request.get_json() or {}
+    mobile = str(data.get("mobile", "")).strip()
+
+    if not (mobile and mobile.isdigit()):
+        return jsonify(ok=False, message="Invalid mobile number"), 400
+
+    # Check user exists
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT user_id FROM users WHERE mobile=%s", (mobile,))
+            user = cur.fetchone()
+
+    if not user:
+        return jsonify(ok=False, message="User not found"), 404
+
+    # Generate OTP
+    otp = random.randint(1000, 9999)
+
+    otp_store[mobile] = {
+        "otp": otp,
+        "expires": time.time() + 300,  # valid 5 min
+        "verified": False
+    }
+
+    # Send OTP via Vonage
+    responseData = sms.send_message(
+        {
+            "from": "Vonage",
+            "to": mobile,
+            "text": f"Your PolyGreen password reset OTP is {otp}",
+        }
+    )
+
+    status = responseData["messages"][0]["status"]
+
+    if status == "0":
+        return jsonify(ok=True, message="OTP sent successfully")
+    else:
+        error_text = responseData["messages"][0]["error-text"]
+        return jsonify(ok=False, error=error_text), 500
+
+@app.route("/api/auth/forgot-password/verify-otp", methods=["POST"])
+def forgot_password_verify_otp():
+    data = request.get_json() or {}
+    mobile = str(data.get("mobile", "")).strip()
+    otp = str(data.get("otp", "")).strip()
+
+    if mobile not in otp_store:
+        return jsonify(ok=False, message="OTP expired or not found"), 400
+
+    record = otp_store[mobile]
+
+    if time.time() > record["expires"]:
+        return jsonify(ok=False, message="OTP expired"), 400
+
+    if str(record["otp"]) != otp:
+        return jsonify(ok=False, message="Incorrect OTP"), 400
+
+    # Mark OTP as verified
+    otp_store[mobile]["verified"] = True
+
+    return jsonify(ok=True, message="OTP verified")
+
+
+@app.route("/api/auth/forgot-password/set-new-password", methods=["POST"])
+def forgot_password_set_new():
     data = request.get_json() or {}
     mobile = str(data.get("mobile", "")).strip()
     new_password = data.get("new_password", "").strip()
 
     if not (mobile and new_password):
-        return jsonify(message="mobile and new_password required"), 400
+        return jsonify(ok=False, message="Missing fields"), 400
 
-    if not mobile.isdigit():
-        return jsonify(message="invalid mobile number"), 400
+    # Check if OTP verified
+    if mobile not in otp_store or otp_store[mobile].get("verified") != True:
+        return jsonify(ok=False, message="OTP not verified"), 401
+
+    # Encrypt password
+    new_hash = bcrypt.hash(new_password)
 
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE mobile=%s", (mobile,))
-            user = cur.fetchone()
-
-            if not user:
-                return jsonify(message="User not found"), 404
-
-            new_hash = bcrypt.hash(new_password)
-
             cur.execute(
                 "UPDATE users SET password_hash=%s WHERE mobile=%s",
                 (new_hash, mobile)
             )
         conn.commit()
 
-    return jsonify(message="Password changed successfully"), 200
+    # Clean OTP data
+    del otp_store[mobile]
+
+    return jsonify(ok=True, message="Password reset successfully")
+
 
 
 @app.route("/api/auth/reset-password", methods=["POST"])
@@ -685,6 +751,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
