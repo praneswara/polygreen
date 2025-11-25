@@ -421,9 +421,17 @@ def export_filtered_machines():
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=20, rightMargin=20)
 
+    # --- FIXED KOREAN-SAFE STYLES ---
     styles = getSampleStyleSheet()
     styles["Normal"].fontName = "HYSMyeongJo-Medium"
-    styles["Heading1"].fontName = "HYSMyeongJo-M-medium"
+
+    styles["Heading1"].fontName = "HYSMyeongJo-Medium"
+    styles["Heading1"].bold = False       # MUST disable bold
+    styles["Heading1"].italic = False     # MUST disable italic
+    styles["Heading1"].fontSize = 16
+    styles["Heading1"].leading = 20
+
+    # --------------------------------
 
     elements = []
     elements.append(Paragraph("기계 보고서 (필터링됨)", styles["Heading1"]))
@@ -471,6 +479,7 @@ def export_filtered_machines():
         as_attachment=True,
         mimetype="application/pdf"
     )
+
 
 
 # ---------------- Export Filtered Machine Detail Report ----------------
@@ -718,3 +727,4 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
