@@ -450,6 +450,78 @@ def list_machines():
         })
     return jsonify(items=out)
 
+
+@app.route("/api/auth/forgot-password", methods=["POST"])
+def forgot_password():
+    data = request.get_json() or {}
+    mobile = str(data.get("mobile", "")).strip()
+    new_password = data.get("new_password", "").strip()
+
+    if not (mobile and new_password):
+        return jsonify(message="mobile and new_password required"), 400
+
+    if not mobile.isdigit():
+        return jsonify(message="invalid mobile number"), 400
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE mobile=%s", (mobile,))
+            user = cur.fetchone()
+
+            if not user:
+                return jsonify(message="User not found"), 404
+
+            new_hash = bcrypt.hash(new_password)
+
+            cur.execute(
+                "UPDATE users SET password_hash=%s WHERE mobile=%s",
+                (new_hash, mobile)
+            )
+        conn.commit()
+
+    return jsonify(message="Password changed successfully"), 200
+
+
+@app.route("/api/auth/reset-password", methods=["POST"])
+@jwt_required()
+def reset_password():
+    uid = get_jwt_identity()  # user_id (string)
+
+    data = request.get_json() or {}
+    current_password = data.get("current_password", "").strip()
+    new_password = data.get("new_password", "").strip()
+
+    if not (current_password and new_password):
+        return jsonify(message="current_password and new_password required"), 400
+
+    # Fetch user
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE user_id=%s", (uid,))
+            user = cur.fetchone()
+
+            if not user:
+                return jsonify(message="User not found"), 404
+
+            # Verify old password
+            current_password_truncated = current_password[:72]
+
+            if not bcrypt.verify(current_password_truncated, user["password_hash"]):
+                return jsonify(message="Incorrect current password"), 401
+
+            # Update new password
+            new_hash = bcrypt.hash(new_password)
+
+            cur.execute(
+                "UPDATE users SET password_hash=%s WHERE user_id=%s",
+                (new_hash, uid)
+            )
+
+        conn.commit()
+
+    return jsonify(message="Password updated successfully"), 200
+
+
 # -------------- Machine endpoints ----------
 # Machine reports earned points (no auth for demo; in prod secure with machine key)
 
@@ -613,6 +685,7 @@ if __name__ == "__main__":
 #         total_bottles_processed=machine.total_bottles,
 #         last_emptied=machine.last_emptied.isoformat() if machine.last_emptied else None
 #     )
+
 
 
 
