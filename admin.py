@@ -100,11 +100,16 @@ def home():
 # ---------------- Login ----------------
 @admin_app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
+    # Load credentials from environment
+    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
 
-        if username == "polygreen" and password == "poly123":
+        # Check against environment values
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             session["admin_logged_in"] = True
             return redirect(url_for("admin_dashboard"))
         else:
@@ -727,4 +732,5 @@ if __name__ == "__main__":
         print("❌ DB connection failed:", e)
 
     admin_app.run(debug=True, port=5001)
+
 
